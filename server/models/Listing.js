@@ -25,11 +25,16 @@ const listingSchema = new mongoose.Schema(
       default: "available",
       index: true,
     },
+    locationCoords: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number], default: [73.8567, 18.5204] }, // [lng, lat]
+    },
   },
   { timestamps: true }
 );
 
 // Common query: active listings sorted by recency/location
 listingSchema.index({ status: 1, location: 1, rent: 1 });
+listingSchema.index({ locationCoords: "2dsphere" });
 
 module.exports = mongoose.model("Listing", listingSchema);

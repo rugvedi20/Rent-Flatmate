@@ -11,18 +11,55 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   const { user, logout } = useAuth();
 
+  // Get initials for profile avatar
+  const getInitials = (name) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  };
+
   return (
     <>
       <nav>
-        <strong>Rent & Flatmate Finder</strong>
-        {user?.role === "tenant" && <Link to="/tenant">Dashboard</Link>}
-        {user?.role === "owner" && <Link to="/owner">Dashboard</Link>}
-        {user?.role === "admin" && <Link to="/admin">Admin</Link>}
-        <div style={{ marginLeft: "auto" }}>
+        <Link to="/" className="nav-logo">
+          <span style={{ fontSize: "22px" }}>✨</span>
+          <span>NestAI</span>
+        </Link>
+        <div className="nav-links">
+          {user?.role === "tenant" && (
+            <>
+              <Link to="/tenant" className="active">Explore &amp; Matches</Link>
+              <Link to="/chat/active?receiverId=none">Messages</Link>
+            </>
+          )}
+          {user?.role === "owner" && (
+            <>
+              <Link to="/owner" className="active">Workspace Dashboard</Link>
+              <Link to="/chat/active?receiverId=none">Messages</Link>
+            </>
+          )}
+          {user?.role === "admin" && <Link to="/admin">Admin Console</Link>}
+        </div>
+        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
           {user ? (
-            <button onClick={logout}>Logout ({user.name})</button>
+            <>
+              {/* Notification icon placeholder */}
+              <div style={{ position: "relative", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                <span style={{ fontSize: "20px" }}>🔔</span>
+                <span style={{ position: "absolute", top: "-2px", right: "-2px", width: "8px", height: "8px", borderRadius: "50%", background: "var(--danger)" }}></span>
+              </div>
+              
+              {/* Profile Avatar */}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "var(--primary-light)", color: "var(--primary)", display: "flex", alignItems: "center", justify: "center", fontSize: "14px", fontWeight: "700", border: "1px solid rgba(79, 70, 229, 0.15)", justifyContent: "center" }}>
+                  {getInitials(user.name)}
+                </div>
+                <button onClick={logout} style={{ padding: "8px 14px", fontSize: "12px", background: "#f1f5f9", color: "#475569", boxShadow: "none" }}>
+                  Sign Out
+                </button>
+              </div>
+            </>
           ) : (
-            <Link to="/login">Login</Link>
+            <Link to="/login" className="btn" style={{ padding: "8px 20px" }}>Login</Link>
           )}
         </div>
       </nav>

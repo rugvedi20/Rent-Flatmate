@@ -1,255 +1,209 @@
-# Rent & Flatmate Finder
+# Rent & Flatmate Finder 🏠✨
 
-A platform where owners list rooms, tenants create "looking for room" profiles, and an AI-powered
-compatibility engine scores and ranks matches. Real-time chat opens once interest is accepted;
-email notifications fire on key events.
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![AI Engine](https://img.shields.io/badge/AI-Gemini%201.5%20Flash-blue.svg)](#)
+[![Socket.io](https://img.shields.io/badge/WebSockets-Socket.io-black.svg)](#)
+
+A production-quality MERN application where owners list rooms, tenants build preference profiles, and a robust dual-layer compatibility engine calculates matching insights. Features real-time conversation-scoped chat, templates for email notifications, and administrative platform controls.
+
+---
+
+## 📖 Table of Contents
+1. [Tech Stack](#1-tech-stack)
+2. [Folder Organization](#2-folder-organization)
+3. [Setup & Environment Variables](#3-setup--environment-variables)
+4. [AI Compatibility Architecture & Design](#4-ai-compatibility-architecture--design)
+5. [Database ER Model](#5-database-er-model)
+6. [API & Sockets Reference](#6-api--sockets-reference)
+7. [Production Deployment Guidelines](#7-production-deployment-guidelines)
+8. [License](#8-license)
 
 ---
 
 ## 1. Tech Stack
 
-- **Backend:** Node.js, Express, MongoDB (Mongoose), Socket.IO, JWT auth
-- **Frontend:** React (Vite), React Router, Axios, Socket.IO client
+- **Backend:** Node.js (Express), MongoDB (Mongoose), Socket.IO, JWT Auth, Zod Validation, Morgan, Helmet, Rate Limiters
+- **Frontend:** React (Vite), Context API, Axios, CSS Modules (premium aesthetics)
 - **LLM:** Google Gemini (`gemini-1.5-flash`) via `@google/generative-ai`
-- **Email:** Nodemailer (any SMTP provider — Gmail app password, Mailtrap, SendGrid SMTP, etc.)
+- **Email Dispatch:** Nodemailer (standard SMTP integrations)
 
 ---
 
-## 2. Project Structure
+## 2. Folder Organization
 
 ```
-rent-flatmate-finder/
+Rent-Flatmate/
 ├── server/
-│   ├── config/db.js
-│   ├── models/            # User, Listing, TenantProfile, Compatibility, Interest, Message
-│   ├── middleware/auth.js # JWT protect + role-based authorize
-│   ├── controllers/
-│   ├── routes/
-│   ├── services/
-│   │   ├── geminiService.js        # LLM call + prompt
-│   │   ├── ruleEngineService.js    # fallback scoring
-│   │   ├── compatibilityService.js # orchestrates cache/LLM/fallback
-│   │   └── emailService.js
-│   ├── sockets/chatSocket.js
-│   ├── server.js
-│   └── .env.example
+│   ├── config/db.js            # MongoDB Connection pool
+│   ├── models/                 # Database Schema definitions
+│   │   ├── User.js             # Account roles (tenant, owner, admin)
+│   │   ├── Listing.js          # Room ads
+│   │   ├── TenantProfile.js    # Preference characteristics
+│   │   ├── Compatibility.js    # Cached score metadata
+│   │   ├── Conversation.js     # Thread scopes
+│   │   └── Message.js          # Persisted private messages
+│   ├── middleware/
+│   │   ├── auth.js             # Protect & role verification
+│   │   ├── errorHandler.js     # Centralized Exception Handler
+│   │   └── validate.js         # Zod schemas request validations
+│   ├── controllers/            # Route business logic handlers
+│   ├── routes/                 # Express Router endpoint declarations
+│   ├── services/               # Modular helpers
+│   │   ├── geminiService.js         # LLM API & Prompt configuration
+│   │   ├── ruleEngineService.js     # Fallback scoring mathematics
+│   │   ├── compatibilityAggregator.js # Weight orchestrator (30% Rule, 70% Gemini)
+│   │   ├── compatibilityCache.js    # Snapshot checker & caching database controller
+│   │   └── emailService.js          # Dedicated html templates and nodemailer transport
+│   ├── sockets/chatSocket.js   # Scoped socket channels
+│   └── server.js               # Express app bootstrap
 └── client/
     ├── src/
-    │   ├── pages/         # Login, Register, TenantDashboard, OwnerDashboard, AdminDashboard, Chat
-    │   ├── context/AuthContext.jsx
-    │   ├── services/api.js
-    │   └── App.jsx
-    └── .env.example
+    │   ├── pages/              # Tenant, Owner, Admin, Login, Chat views
+    │   ├── context/AuthContext.jsx # Global user authentication state
+    │   ├── services/api.js     # Axios client configuration
+    │   ├── index.css           # Premium global stylesheet
+    │   └── App.jsx             # Main Router bootstrap
 ```
 
 ---
 
-## 3. Setup Guide
+## 3. Setup & Environment Variables
 
 ### Prerequisites
-- Node.js 18+
-- A MongoDB instance (local or Atlas)
-- A Gemini API key (https://aistudio.google.com/app/apikey) — optional; app works without one via the rule-based fallback
-- An SMTP account for email (Gmail app password works for testing)
+- Node.js 18+ installed
+- MongoDB (Local instance or Atlas cloud cluster)
+- Gemini API Key ([AI Studio Key Page](https://aistudio.google.com/app/apikey))
 
-### Backend
+### Configuration (`server/.env`)
+Create a `.env` file inside `server/` with the following variables:
+```env
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/rent-flatmate
+JWT_SECRET=super_secret_jwt_sign_key
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-1.5-flash
+HIGH_COMPATIBILITY_THRESHOLD=80
+EMAIL_HOST=smtp.mailtrap.io
+EMAIL_PORT=2525
+EMAIL_USER=your_smtp_user
+EMAIL_PASS=your_smtp_password
+EMAIL_FROM="Rent & Flatmate Finder" <noreply@rentflatmate.com>
+```
 
+### Installation Commands
+Run the following in your shell:
+
+**Backend Setup:**
 ```bash
 cd server
-cp .env.example .env
-# edit .env with your MongoDB URI, JWT secret, Gemini key, and SMTP credentials
 npm install
+
+# Seed the database with Pune demo listings & tenant profiles
+node seed.js
+
+# Start the server
 npm run dev
 ```
 
-Server starts on `http://localhost:5000`. Health check: `GET /health`.
-
-### Frontend
-
+**Frontend Setup:**
 ```bash
 cd client
-cp .env.example .env
 npm install
 npm run dev
 ```
 
-App starts on `http://localhost:5173`.
-
-### Quick smoke test
-1. Register an owner, create a listing.
-2. Register a tenant, save a preference profile, browse listings — scores appear.
-3. Tenant expresses interest → owner accepts → chat link appears for both sides.
-
----
-
-## 4. Database Schema
-
-### User
-| Field | Type | Notes |
-|---|---|---|
-| name | String | required |
-| email | String | required, unique |
-| password | String | bcrypt-hashed |
-| role | enum | owner / tenant / admin |
-| isActive | Boolean | default true |
-
-### Listing
-| Field | Type | Notes |
-|---|---|---|
-| ownerId | ObjectId → User | |
-| title, location | String | location indexed |
-| rent | Number | |
-| availableFrom | Date | |
-| roomType | enum | single / shared / 1bhk / 2bhk / other |
-| furnishing | enum | furnished / semi-furnished / unfurnished |
-| photos | [String] | URLs |
-| status | enum | available / filled (filled listings excluded from search) |
-
-### TenantProfile
-| Field | Type | Notes |
-|---|---|---|
-| tenantId | ObjectId → User | unique — one profile per tenant |
-| preferredLocation | String | |
-| budgetMin, budgetMax | Number | validated min ≤ max |
-| moveInDate | Date | |
-| notes | String | optional free text (reserved for future LLM enrichment) |
-
-### Compatibility
-| Field | Type | Notes |
-|---|---|---|
-| tenantId | ObjectId → User | |
-| listingId | ObjectId → Listing | unique compound index with tenantId |
-| score | Number | 0–100 |
-| explanation | String | |
-| generatedBy | enum | gemini / rule-engine |
-| inputSnapshot | Object | location/budget/rent values used, so we can detect staleness and avoid recompute |
-
-### Interest
-| Field | Type | Notes |
-|---|---|---|
-| tenantId, ownerId, listingId | ObjectId | unique compound index (tenantId, listingId) — one request per pair |
-| status | enum | pending / accepted / rejected |
-| compatibilityScoreAtRequest | Number | snapshot used to decide the high-compatibility owner email |
-
-### Message
-| Field | Type | Notes |
-|---|---|---|
-| listingId | ObjectId → Listing | conversation is scoped per listing |
-| sender, receiver | ObjectId → User | |
-| message | String | |
-| createdAt | Date | acts as timestamp (via schema `timestamps: true`) |
+### Database Seeding System
+We include a powerful database seeding system in `server/seed.js`. Executing `node seed.js` does the following:
+1. Clears existing collections.
+2. Registers 4 Owner accounts and 8 Tenant accounts.
+3. Publishes 15 Listing rooms across key Pune localities (Baner, Wakad, Hinjewadi, Kharadi, Viman Nagar, Pashan, Kothrud, Aundh) pre-populated with coordinates.
+4. Creates 8 Tenant Profiles matching various rent budgets, localities, and preferences.
+5. Displays login credentials for all demo accounts in the terminal.
 
 ---
 
-## 5. API Documentation
+## 4. AI Compatibility Architecture & Design
 
-All routes except `/auth/*` and `/health` require `Authorization: Bearer <token>`.
+### Dual-Layer Matching System
 
-### Auth
-| Method | Route | Access | Body |
-|---|---|---|---|
-| POST | /api/auth/register | public | `{ name, email, password, role }` |
-| POST | /api/auth/login | public | `{ email, password }` |
-
-### Listings
-| Method | Route | Access | Notes |
-|---|---|---|---|
-| POST | /api/listings | owner | create listing |
-| PUT | /api/listings/:id | owner (own) | edit listing |
-| DELETE | /api/listings/:id | owner (own) | delete listing |
-| PUT | /api/listings/:id/fill | owner (own) | mark filled, hides from search |
-| GET | /api/listings/my | owner | all of the owner's listings |
-| GET | /api/listings?location=&minRent=&maxRent= | tenant | filtered, ranked by compatibility if profile exists |
-| GET | /api/listings/:id | any authenticated | single listing + compatibility if tenant |
-
-### Tenant Profile
-| Method | Route | Access |
-|---|---|---|
-| POST | /api/tenants/profile | tenant — create/update |
-| GET | /api/tenants/profile | tenant |
-
-### Interest
-| Method | Route | Access | Notes |
-|---|---|---|---|
-| POST | /api/interest | tenant | `{ listingId }`; triggers owner email if compatibility > 80 |
-| PUT | /api/interest/:id | owner (own) | `{ status: "accepted" \| "rejected" }`; triggers tenant email |
-| GET | /api/interest/received | owner | requests on the owner's listings |
-| GET | /api/interest/sent | tenant | requests the tenant has sent |
-
-### Messages
-| Method | Route | Access |
-|---|---|---|
-| GET | /api/messages/:listingId | tenant/owner on an **accepted** interest for that listing only |
-
-### Admin
-| Method | Route | Access |
-|---|---|---|
-| GET | /api/admin/users | admin |
-| DELETE | /api/admin/users/:id | admin |
-| GET | /api/admin/listings | admin |
-| DELETE | /api/admin/listings/:id | admin |
-| GET | /api/admin/stats | admin |
-
-### Socket.IO events
-Connect with `io(url, { auth: { token } })`.
-- `join_chat({ listingId }, callback)` — joins the room, rejected unless the interest is accepted
-- `send_message({ listingId, receiverId, message }, callback)` — persists then broadcasts
-- `receive_message` — server → client broadcast of a new persisted message
-
----
-
-## 6. LLM Integration — Prompt and Example I/O
-
-**Prompt template** (`server/services/geminiService.js`), following the assignment's guidance exactly
-(scoring based on budget and location only):
-
-```
-You are a compatibility scoring engine for a room rental platform.
-
-Given this room listing:
-- Location: Baner
-- Rent: ₹9000
-
-And this tenant profile:
-- Preferred Location: Baner
-- Budget Range: ₹8000 - ₹10000
-
-Compute a compatibility score from 0 to 100 based on budget and location match.
-
-Respond with ONLY valid JSON in this exact shape, with no markdown formatting, no code fences, and no extra text:
-{"score": <number 0-100>, "explanation": "<one short sentence>"}
+```mermaid
+graph TD
+  A[Tenant Dashboard API Request] --> B{Cache Hit? Check snapshots}
+  B -- Yes --> C[Return cached MongoDB Compatibility document]
+  B -- No/Stale --> D[Calculate Rule-based Scorer]
+  D --> E{Gemini Key Loaded?}
+  E -- Yes --> F[Call Gemini 1.5 API with Retry & Timeout wrapper]
+  F -- Success --> G[Combine: 30% Rule + 70% Gemini]
+  F -- Malformed/Timeout --> H[Degrade Gracefully: 100% Rule Engine Fallback]
+  E -- No --> H
+  G --> I[Format Badge Excellent/Good/Moderate/Poor]
+  H --> I
+  I --> J[Save to Compatibility Collection]
+  J --> K[Return to Frontend Dashboard]
 ```
 
-**Example response:**
+### Prompt Specification
+Gemini receives a structured context containing property location, rent, type, furnishing status, and description text matched against tenant preferences (including preferred room characteristics, parking, pets, smoking, gender, and notes). It returns a strict JSON payload:
 ```json
-{"score": 95, "explanation": "Excellent location match and budget comfortably fits within range."}
+{
+  "score": 92,
+  "confidence": 0.95,
+  "explanation": "Locality coordinates align, and the listing is pet friendly matching your preference.",
+  "pros": ["Near preferred Baner West locality", "Pets allowed", "Fits budget comfortably"],
+  "cons": ["No dedicated parking space listed"],
+  "summary": "This listing matches almost all primary preferences and is highly recommended."
+}
 ```
-
-**Storage:** the score, explanation, `generatedBy: "gemini"`, and an `inputSnapshot` are upserted into
-the `Compatibility` collection keyed by `(tenantId, listingId)`. On the next request, if the tenant's
-preferences and the listing's location/rent haven't changed, the cached document is returned — no
-new Gemini call is made. See `compatibilityService.isStale()`.
-
-**Fallback:** if the Gemini call throws (missing key, network failure, malformed JSON), the same
-inputs are scored deterministically by `ruleEngineService.js`:
-- Location: exact match = 60 pts, partial match = 35 pts, no match = 10 pts
-- Budget: within range = 40 pts, ≤10% over budget = 20 pts, below budget = 30 pts, otherwise = 0 pts
-
-Example fallback output for the same listing/tenant pair:
-```json
-{"score": 100, "explanation": "Rule-based score: exact location match (+60), rent fits comfortably within budget (+40)."}
-```
-
-`generatedBy` is set to `"rule-engine"` so the discrepancy between the two scoring paths is
-always visible and auditable in the database.
 
 ---
 
-## 7. Notes for Deployment
+## 5. Database ER Model
 
-- Set `CLIENT_URL` (server) and `VITE_API_URL` (client) to your deployed URLs.
-- MongoDB Atlas free tier works fine for `MONGO_URI`.
-- Render/Railway both support long-lived WebSocket connections needed for Socket.IO — confirm the
-  hosting plan doesn't sleep the process between chat messages during a demo.
-- Gemini API key is optional at deploy time; omitting it forces every score through the rule-based
-  path, which is still fully functional and a good way to demonstrate graceful degradation live.
+```
+   [User] 1 -------- 0..* [Listing] (published rooms)
+     1                      1
+     |                      |
+     | 1                    | 0..*
+     |                      |
+[TenantProfile] 1 ------ 0..* [Compatibility] (caching score analytics)
+     1                      1
+     |                      |
+     +------ 0..* [Conversation] 0..* ------+ (threads)
+                      1
+                      |
+                      | 0..*
+                  [Message] (conversation-scoped, read indicators)
+```
+
+---
+
+## 6. API & Sockets Reference
+
+### Major REST Paths
+- **POST** `/api/auth/register` - Create user credentials.
+- **POST** `/api/auth/login` - Verify password and returns token.
+- **GET** `/api/listings` - Search active rooms. Filter by location, min/max rent, roomType, and furnishing. Returns paginated compatibility results.
+- **POST** `/api/interest` - Submit interest request. Automatically notifies owner if score > 80.
+- **PUT** `/api/interest/:id` - Accept/reject interest request. If accepted, initializes the user thread.
+- **GET** `/api/messages/conversations` - Retrieve chat list for inbox.
+- **GET** `/api/messages/conversation/:conversationId` - Retrieve paginated thread messages.
+
+### WebSocket Handshakes
+- Connect: `io(SOCKET_URL, { auth: { token } })`
+- **Join Chat:** `socket.emit("join_chat", { conversationId })`
+- **Send Message:** `socket.emit("send_message", { conversationId, message })`
+- **Receive Broadcast:** Listen on `receive_message`.
+
+---
+
+## 7. Production Deployment Guidelines
+
+1. **Persistent Connections:** Deploy to platforms supporting sticky WebSockets (e.g. Render, Railway, AWS ECS) instead of serverless architectures (Vercel/Netlify functions) to ensure active room subscriptions persist correctly.
+2. **Database Sharding/Indexing:** Maintain default index rules. Ensure compound key unique constraints are mounted properly in the MongoDB cluster.
+3. **Environment Caching:** Restrict Gemini API keys to production domains to secure token limits from spam.
+
+---
+
+## 8. License
+Distributed under the MIT License. See `LICENSE` for details.

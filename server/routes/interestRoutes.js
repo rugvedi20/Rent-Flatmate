@@ -7,11 +7,13 @@ const {
   getReceivedInterests,
   getSentInterests,
 } = require("../controllers/interestController");
+const validate = require("../middleware/validate");
+const { createInterestSchema, updateInterestSchema } = require("../middleware/schemas");
 
 router.use(protect);
 
-router.post("/", authorize("tenant"), createInterest);
-router.put("/:id", authorize("owner"), updateInterestStatus);
+router.post("/", authorize("tenant"), validate(createInterestSchema), createInterest);
+router.put("/:id", authorize("owner"), validate(updateInterestSchema), updateInterestStatus);
 router.get("/received", authorize("owner"), getReceivedInterests);
 router.get("/sent", authorize("tenant"), getSentInterests);
 
