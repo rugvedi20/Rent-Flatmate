@@ -71,8 +71,8 @@ async function getOrGenerateCompatibility(tenantId, listing, tenantProfile, forc
     
     const ruleScore = ruleResult.score;
     
-    // Use the actual ruleScore without any artificial discount factor to keep scores consistent
-    const finalScore = ruleScore;
+    // Apply a discount factor (0.7) for local fallbacks to ensure LLM matched rooms rank higher
+    const finalScore = Math.round(ruleScore * 0.7);
     
     const pros = [];
     const cons = [];
