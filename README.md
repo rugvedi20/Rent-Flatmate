@@ -43,13 +43,16 @@ Rent-Flatmate/
 │   │   ├── Listing.js             # Room listings with GeoJSON coordinates
 │   │   ├── TenantProfile.js       # Tenant preferences (budget, location, lifestyle)
 │   │   ├── CompatibilityScore.js  # Cached AI + rule score per tenant-listing pair
+│   │   ├── Compatibility.js       # Adapter exporting CompatibilityScore
 │   │   ├── Conversation.js        # Chat thread scopes
 │   │   ├── Message.js             # Persisted chat messages
-│   │   ├── Interest.js            # Interest request lifecycle
+│   │   ├── InterestRequest.js     # Core interest request database schema
+│   │   ├── Interest.js            # Adapter exporting InterestRequest
 │   │   ├── Notification.js        # In-app notifications
 │   │   ├── SavedListing.js        # Tenant bookmarks
 │   │   ├── SearchHistory.js       # Tenant search audit log
 │   │   ├── AuditLog.js            # Platform admin activity log
+│   │   ├── Review.js              # User reviews rating/feedback
 │   │   └── ListingImage.js        # Listing photo references
 │   ├── middleware/
 │   │   ├── auth.js                # JWT protect & role guard
@@ -67,16 +70,18 @@ Rent-Flatmate/
 │   ├── sockets/chatSocket.js      # Authenticated Socket.IO conversation rooms
 │   ├── utils/
 │   │   ├── asyncHandler.js        # Express async error wrapper
+│   │   ├── generateToken.js       # Helper to generate authentication JWT tokens
 │   │   ├── geocoder.js            # Location → GeoJSON coordinate resolver
 │   │   └── logger.js              # Winston structured logger
 │   ├── seed.js                    # Database seeder (30 Pune listings, 15 tenant profiles)
 │   └── server.js                  # Express app bootstrap
 └── client/
     ├── src/
-    │   ├── pages/                 # Landing, TenantDashboard, OwnerDashboard, Chat, Login, Register
+    │   ├── pages/                 # Landing, TenantDashboard, OwnerDashboard, Chat, Login, Register, AdminDashboard, ProfilePage, PropertyDetails
     │   ├── components/
     │   │   ├── PropertyCard.jsx   # Airbnb-style listing card with AI score
     │   │   ├── MatchBreakdown.jsx # Expandable AI compatibility metrics
+    │   │   ├── MapComponent.jsx   # Map container for spatial listings & profile locations
     │   │   └── ProtectedRoute.jsx # Auth-gated route wrapper
     │   ├── context/AuthContext.jsx # Global auth state
     │   ├── services/api.js        # Axios client with 401 auto-logout interceptor
@@ -112,12 +117,12 @@ JWT_EXPIRES_IN=7d
 GROQ_API_KEY=your_groq_api_key_here
 GROQ_MODEL=llama-3.3-70b-versatile
 
-# Email (any SMTP — Mailtrap recommended for testing)
-EMAIL_HOST=smtp.mailtrap.io
+# Email (Gmail SMTP — or any other SMTP provider like Mailtrap)
+EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_USER=your_mailtrap_user
-EMAIL_PASS=your_mailtrap_pass
-EMAIL_FROM="Rent & Flatmate Finder <no-reply@rentfinder.com>"
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_google_app_password
+EMAIL_FROM="Rent & Flatmate Finder <your_email@gmail.com>"
 
 # Compatibility engine
 HIGH_COMPATIBILITY_THRESHOLD=80
@@ -263,10 +268,12 @@ Scores are stored in the `CompatibilityScore` collection, keyed by `(tenantId, l
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/listings` | Search active listings. Query params: `location`, `minRent`, `maxRent`, `roomType`, `furnishing`. Returns ranked compatibility scores for authenticated tenants. |
+| GET | `/api/listings/my` | Retrieve all listings owned by the logged-in user (owner only) |
+| GET | `/api/listings/:id` | Retrieve detailed information for a single listing |
 | POST | `/api/listings` | Create listing (owner only) |
-| PATCH | `/api/listings/:id` | Update listing (owner only) |
+| PUT | `/api/listings/:id` | Update listing details (owner only) |
+| PUT | `/api/listings/:id/fill` | Mark listing as filled — removes from active search results (owner only) |
 | DELETE | `/api/listings/:id` | Delete listing (owner only) |
-| PATCH | `/api/listings/:id/fill` | Mark listing as filled — removes from search results |
 
 ### Interest Requests
 | Method | Endpoint | Description |
@@ -288,12 +295,28 @@ Scores are stored in the `CompatibilityScore` collection, keyed by `(tenantId, l
 | POST | `/api/saved/toggle` | Toggle bookmark on a listing |
 | GET | `/api/saved` | Get tenant's saved listings |
 
+### Profiles
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/profile/:userId` | Get unified profile details (tenant preferences + map coords + reviews) |
+| POST | `/api/profile` | Update unified profile details |
+| GET | `/api/tenants/profile` | Get current tenant profile |
+| POST | `/api/tenants/profile` | Upsert current tenant profile |
+
+### Reviews
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/reviews` | Submit a landlord review (tenant only) |
+| GET | `/api/reviews/owner/:ownerId` | Get all reviews for a landlord |
+
 ### Admin
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/admin/users` | List all users |
 | DELETE | `/api/admin/users/:id` | Delete user |
 | GET | `/api/admin/listings` | View all listings |
+| DELETE | `/api/admin/listings/:id` | Delete listing |
+| GET | `/api/admin/stats` | Retrieve platform statistics |
 
 ### WebSocket Events (Socket.IO)
 ```js
@@ -369,7 +392,7 @@ If Groq is unavailable, `final_score = round(rule_score × 0.7)` — the 0.7 dis
 1. **WebSocket Hosting:** Deploy to platforms that support persistent connections — [Render](https://render.com), [Railway](https://railway.app), or [Fly.io](https://fly.io). Avoid pure serverless (Vercel/Netlify functions) as WebSocket rooms require sticky connections.
 2. **MongoDB Atlas:** Use a cloud cluster with the connection string in `MONGO_URI`. Ensure indexes are created via `seed.js` or Mongoose's `autoIndex`.
 3. **Groq Rate Limits:** The free tier allows ~30 RPM. The Top-5 sequential throttle architecture (250ms delay between calls) is designed to stay well within this limit.
-4. **Email:** Configure any SMTP provider. [Mailtrap](https://mailtrap.io) (free) is recommended for testing. Gmail app passwords also work with `EMAIL_HOST=smtp.gmail.com`.
+4. **Email:** Configure any SMTP provider. Gmail app passwords with `EMAIL_HOST=smtp.gmail.com` are used in our configuration. Alternatively, [Mailtrap](https://mailtrap.io) (free) or SendGrid can be used for staging/testing.
 
 ---
 

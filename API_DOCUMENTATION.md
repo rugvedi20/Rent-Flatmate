@@ -127,6 +127,20 @@ All profile routes are prefixed with `/api/profile`. Requests require an `Author
 ```
 * **Success Response (HTTP 200)**: Returns the updated Profile object.
 
+### Tenant-Specific Profile Endpoints (Legacy / Internal)
+All tenant profile routes are prefixed with `/api/tenants`. Requests require an `Authorization: Bearer <JWT_TOKEN>` and the user must have the `"tenant"` role.
+
+#### Fetch Current Tenant Profile
+* **Method**: `GET`
+* **Endpoint**: `/api/tenants/profile`
+* **Success Response (HTTP 200)**: Returns the tenant's TenantProfile object.
+
+#### Create or Replace Tenant Profile
+* **Method**: `POST`
+* **Endpoint**: `/api/tenants/profile`
+* **Request Body**: Similar to `/api/profile` updates, specific to tenant match parameters.
+* **Success Response (HTTP 200)**: Returns the updated TenantProfile object.
+
 ---
 
 ## 3. Listing Endpoints
@@ -199,6 +213,38 @@ All listing routes are prefixed with `/api/listings`.
 ```
 * **Success Response (HTTP 201)**: Returns the created listing object.
 
+### Get Owner's Listings (Owner Only)
+* **Method**: `GET`
+* **Endpoint**: `/api/listings/my`
+* **Success Response (HTTP 200)**: Returns an array of all Listing objects owned by the authenticated owner.
+
+### Get Listing By ID
+* **Method**: `GET`
+* **Endpoint**: `/api/listings/:id`
+* **Success Response (HTTP 200)**: Returns a detailed Listing object with populated owner information and compatibility score (if requested by a tenant).
+
+### Update Listing Details (Owner Only)
+* **Method**: `PUT`
+* **Endpoint**: `/api/listings/:id`
+* **Request Body**: Partial Listing schema fields to update.
+* **Success Response (HTTP 200)**: Returns the updated Listing object.
+
+### Mark Listing as Filled (Owner Only)
+* **Method**: `PUT`
+* **Endpoint**: `/api/listings/:id/fill`
+* **Success Response (HTTP 200)**: Returns the updated Listing object with `status` set to `"filled"`.
+
+### Delete Listing (Owner Only)
+* **Method**: `DELETE`
+* **Endpoint**: `/api/listings/:id`
+* **Success Response (HTTP 200)**:
+```json
+{
+  "success": true,
+  "message": "Listing deleted"
+}
+```
+
 ---
 
 ## 4. Landlord Review Endpoints
@@ -220,7 +266,138 @@ All review routes are prefixed with `/api/reviews`.
 
 ---
 
-## 5. WebSockets Reference (Socket.IO)
+## 5. Interest Requests Endpoints
+
+All interest routes are prefixed with `/api/interest`. Requests require an `Authorization: Bearer <JWT_TOKEN>` header.
+
+### Express Interest (Tenant Only)
+* **Method**: `POST`
+* **Endpoint**: `/api/interest`
+* **Request Body**:
+```json
+{
+  "listingId": "60d5f2fc72c1c61864a78c22"
+}
+```
+* **Success Response (HTTP 201)**:
+```json
+{
+  "_id": "60d5f42c72c1c61864a78c50",
+  "tenantId": "60d5f15c72c1c61864a78c10",
+  "listingId": "60d5f2fc72c1c61864a78c22",
+  "ownerId": "60d5f15c72c1c61864a78c15",
+  "status": "pending",
+  "compatibilityScoreAtRequest": 92,
+  "createdAt": "2026-07-14T10:05:00.000Z",
+  "updatedAt": "2026-07-14T10:05:00.000Z"
+}
+```
+
+### Accept / Reject Interest Request (Owner Only)
+* **Method**: `PUT`
+* **Endpoint**: `/api/interest/:id`
+* **Request Body**:
+```json
+{
+  "status": "accepted"
+}
+```
+* **Success Response (HTTP 200)**: Returns the updated InterestRequest object.
+
+### View Received Requests (Owner Only)
+* **Method**: `GET`
+* **Endpoint**: `/api/interest/received`
+* **Success Response (HTTP 200)**: Returns an array of interest requests on the owner's listings with populated tenant and listing info.
+
+### View Sent Requests (Tenant Only)
+* **Method**: `GET`
+* **Endpoint**: `/api/interest/sent`
+* **Success Response (HTTP 200)**: Returns an array of interest requests sent by the tenant with populated listing info.
+
+---
+
+## 6. Messages & Chat REST Endpoints
+
+All message routes are prefixed with `/api/messages`. Requests require an `Authorization: Bearer <JWT_TOKEN>` header.
+
+### Fetch Conversations
+* **Method**: `GET`
+* **Endpoint**: `/api/messages/conversations`
+* **Success Response (HTTP 200)**: Returns a list of all active chat threads for the current user.
+
+### Fetch Conversation Messages
+* **Method**: `GET`
+* **Endpoint**: `/api/messages/conversation/:conversationId`
+* **Query Parameters**:
+  * `page` (number, default: 1)
+  * `limit` (number, default: 20)
+* **Success Response (HTTP 200)**: Returns paginated messages inside the thread in chronological order.
+
+### Fetch Messages by Listing (Legacy/Compatibility)
+* **Method**: `GET`
+* **Endpoint**: `/api/messages/:listingId`
+* **Query Parameters** (Owner Only):
+  * `receiverId` (string, target tenant ID)
+* **Success Response (HTTP 200)**: Returns all messages in the thread.
+
+---
+
+## 7. Saved Listings Endpoints
+
+All bookmark/save routes are prefixed with `/api/saved`. Requests require an `Authorization: Bearer <JWT_TOKEN>` header.
+
+### Toggle Bookmark on Listing (Tenant Only)
+* **Method**: `POST`
+* **Endpoint**: `/api/saved/toggle`
+* **Request Body**:
+```json
+{
+  "listingId": "60d5f2fc72c1c61864a78c22"
+}
+```
+* **Success Response (HTTP 200)**:
+```json
+{
+  "success": true,
+  "saved": true,
+  "message": "Listing added to bookmarks"
+}
+```
+
+### Fetch Saved Listings (Tenant Only)
+* **Method**: `GET`
+* **Endpoint**: `/api/saved`
+* **Success Response (HTTP 200)**: Returns an array of populated Listing objects bookmarked by the tenant.
+
+---
+
+## 8. Admin Console Endpoints
+
+All administrative routes are prefixed with `/api/admin`. Requests require an `Authorization: Bearer <JWT_TOKEN>` and the user must have the `"admin"` role.
+
+### List All Users
+* **Method**: `GET`
+* **Endpoint**: `/api/admin/users`
+
+### Delete User
+* **Method**: `DELETE`
+* **Endpoint**: `/api/admin/users/:id`
+
+### List All Listings
+* **Method**: `GET`
+* **Endpoint**: `/api/admin/listings`
+
+### Delete Listing
+* **Method**: `DELETE`
+* **Endpoint**: `/api/admin/listings/:id`
+
+### Get Platform Statistics
+* **Method**: `GET`
+* **Endpoint**: `/api/admin/stats`
+
+---
+
+## 9. WebSockets Reference (Socket.IO)
 
 Clients connect to the Socket.IO instance and join room channels for secure real-time messaging.
 
