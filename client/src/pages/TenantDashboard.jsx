@@ -162,7 +162,7 @@ export default function TenantDashboard() {
 
   return (
     <div className="container py-8">
-      
+
       {/* Subpage Tab Selection Bar */}
       <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border)", marginBottom: "32px", paddingBottom: "12px", overflowX: "auto" }}>
         <button
@@ -176,7 +176,7 @@ export default function TenantDashboard() {
             fontWeight: "700"
           }}
         >
-          🔍 Explore &amp; Matches
+          Explore &amp; Matches
         </button>
         <button
           onClick={() => { setActiveTab("saved"); setSearchParams({ tab: "saved" }); }}
@@ -189,7 +189,7 @@ export default function TenantDashboard() {
             fontWeight: "700"
           }}
         >
-          ❤️ Saved Rooms ({savedListings.length})
+          Saved Rooms ({savedListings.length})
         </button>
         <button
           onClick={() => { setActiveTab("profile"); setSearchParams({ tab: "profile" }); }}
@@ -202,7 +202,7 @@ export default function TenantDashboard() {
             fontWeight: "700"
           }}
         >
-          👤 Profile &amp; Preferences
+          Profile &amp; Preferences
         </button>
       </div>
 
@@ -235,7 +235,7 @@ export default function TenantDashboard() {
                 onChange={(e) => setSearchLoc(e.target.value)}
               />
             </div>
-            
+
             <div className="filter-group">
               <label>Room Type</label>
               <select value={searchRoomType} onChange={(e) => setSearchRoomType(e.target.value)}>
@@ -278,17 +278,17 @@ export default function TenantDashboard() {
             </div>
 
             <div style={{ display: "flex", gap: "8px", alignSelf: "flex-end", height: "42px" }}>
-              <button 
-                type="button" 
-                onClick={() => loadListings(1)} 
+              <button
+                type="button"
+                onClick={() => loadListings(1)}
                 style={{ padding: "0 24px", height: "100%", fontWeight: "700" }}
               >
                 Apply Filters
               </button>
               {(searchLoc || searchRoomType || searchFurnishing || searchMin || searchMax) && (
-                <button 
-                  type="button" 
-                  onClick={handleReset} 
+                <button
+                  type="button"
+                  onClick={handleReset}
                   style={{ background: "#f1f5f9", color: "#475569", border: "1px solid var(--border)", padding: "0 16px", height: "100%", fontWeight: "700" }}
                 >
                   Reset
@@ -358,17 +358,17 @@ export default function TenantDashboard() {
             {/* Pagination controls */}
             {!loading && totalPages > 1 && (
               <div style={{ display: "flex", gap: "12px", alignItems: "center", justifyContent: "center", marginTop: "32px" }}>
-                <button 
-                  disabled={page <= 1} 
-                  onClick={() => loadListings(page - 1)} 
+                <button
+                  disabled={page <= 1}
+                  onClick={() => loadListings(page - 1)}
                   style={{ background: "#64748b", padding: "10px 20px" }}
                 >
                   Previous
                 </button>
                 <span style={{ fontSize: "14px", fontWeight: "700" }}>Page {page} of {totalPages}</span>
-                <button 
-                  disabled={page >= totalPages} 
-                  onClick={() => loadListings(page + 1)} 
+                <button
+                  disabled={page >= totalPages}
+                  onClick={() => loadListings(page + 1)}
                   style={{ background: "#64748b", padding: "10px 20px" }}
                 >
                   Next
@@ -390,7 +390,7 @@ export default function TenantDashboard() {
               Bookmark listings to review later and calculate match offsets.
             </p>
           </div>
-          
+
           {savedListings.length === 0 && (
             <div style={{ padding: "64px 24px", textAlign: "center", background: "white", borderRadius: "20px", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
               <span style={{ fontSize: "48px" }}>🤍</span>
