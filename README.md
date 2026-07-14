@@ -7,7 +7,16 @@
 
 A production-quality MERN application where owners list rooms, tenants build preference profiles, and a robust dual-layer AI compatibility engine ranks matches. Features real-time conversation-scoped chat, HTML email notifications, and administrative platform controls.
 
----
+## 🌐 Live Demo
+
+| | Link |
+|---|---|
+| **Frontend (Vercel)** | https://rent-flatmate-eight.vercel.app/ |
+| **Backend API (Render)** | https://rent-flatmate-backend-7yxo.onrender.com/ |
+
+> ⚠️ The backend is hosted on Render's free tier and may take **30–60 seconds** to wake up on the first request after a period of inactivity.
+
+
 
 ## 📖 Table of Contents
 1. [Tech Stack](#1-tech-stack)
