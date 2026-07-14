@@ -458,7 +458,7 @@ export default function Landing() {
           <div className="footer-top-grid">
             <div className="footer-brand">
               <span className="footer-logo">
-                <span className="text-[#10b981]"><Home className="h-5 w-5" /></span> NestAI
+                <span className="text-[#10b981]"><Home className="h-5 w-5" /></span> FlatMate+
               </span>
               <p className="footer-desc">
                 Lifestyle-first room and flatmate matching inside premium gated societies in Pune's tech hubs.
@@ -495,7 +495,7 @@ export default function Landing() {
           </div>
           
           <div className="footer-bottom">
-            <span>&copy; {new Date().getFullYear()} NestAI. All rights reserved.</span>
+            <span>&copy; {new Date().getFullYear()} FlatMate+. All rights reserved.</span>
             <div className="footer-bottom-links">
               <span>Privacy guidelines</span>
               <span>Terms of service</span>

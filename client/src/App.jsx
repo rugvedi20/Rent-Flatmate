@@ -51,7 +51,7 @@ export default function App() {
       <nav>
         <Link to="/" className="nav-logo">
           <span style={{ fontSize: "22px" }}>✨</span>
-          <span>NestAI</span>
+          <span>FlatMate+</span>
         </Link>
         <div className="nav-links">
           {user?.role === "tenant" && (
