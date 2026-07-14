@@ -41,11 +41,9 @@ Compute a compatibility score from 0 to 100 based on the following guidelines:
    - 1 to 3 km: High compatibility (minor penalty).
    - 3 to 5 km: Moderate compatibility.
    - Above 5 km: High penalty (decreases exponentially with distance).
-2. Budget Match:
-   - Well within budget: High score.
+   - Well within or below budget maximum: Perfect budget match (highly favorable).
    - Marginally above budget (up to 10% overflow): Minor penalty.
    - Significantly above budget: High penalty.
-   - Below budget minimum: Small penalty (as tenants might find cheap places slightly less premium, but generally favorable).
 3. Availability & Move-in:
    - Available on or before desired move-in date: Perfect match.
    - Available within 15 days after move-in date: Minor penalty.

@@ -91,8 +91,8 @@ function getRuleBasedCompatibility(listing, tenantProfile) {
     budgetScore = 15;
     budgetReason = "rent is slightly above budget";
   } else if (rent < budgetMin) {
-    budgetScore = 20;
-    budgetReason = "rent is below budget min";
+    budgetScore = 30;
+    budgetReason = "rent is below budget min (highly affordable)";
   }
 
   // 3. Move-in date match (max 10 pts)

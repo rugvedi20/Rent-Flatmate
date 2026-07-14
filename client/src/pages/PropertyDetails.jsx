@@ -376,11 +376,10 @@ export default function PropertyDetails() {
   
   const getBudgetMatchVal = () => {
     if (compatibility?.inputSnapshot) {
-      const { rent, budgetMin, budgetMax } = compatibility.inputSnapshot;
-      if (rent !== undefined && budgetMin !== undefined && budgetMax !== undefined) {
-        if (rent >= budgetMin && rent <= budgetMax) return 100;
+      const { rent, budgetMax } = compatibility.inputSnapshot;
+      if (rent !== undefined && budgetMax !== undefined) {
+        if (rent <= budgetMax) return 100; // Anything within or below maximum budget is 100% match
         if (rent > budgetMax && rent <= budgetMax * 1.1) return 60;
-        if (rent < budgetMin) return 85; // Less than minimum is generally favorable
         return 30;
       }
     }
