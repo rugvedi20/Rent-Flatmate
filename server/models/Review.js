@@ -30,4 +30,7 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Ensure one review per tenant-owner pair
+reviewSchema.index({ ownerId: 1, tenantId: 1 }, { unique: true });
+
 module.exports = mongoose.model("Review", reviewSchema);

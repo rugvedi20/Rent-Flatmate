@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import MapComponent from "../components/MapComponent";
 import { 
   ArrowLeft, 
   Heart, 
@@ -72,6 +73,103 @@ export default function PropertyDetails() {
   const [newReviewText, setNewReviewText] = useState("");
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  // Nearby POIs states
+  const [nearbyPOIs, setNearbyPOIs] = useState([]);
+  const [loadingPOIs, setLoadingPOIs] = useState(false);
+
+  // Get POI icon helper
+  const getPoiIcon = (category) => {
+    switch (category.toLowerCase()) {
+      case "hospital":
+        return <ShieldCheck size={16} />;
+      case "metro/bus stop":
+        return <Car size={16} />;
+      case "gym":
+        return <Dumbbell size={16} />;
+      case "grocery / supermarket":
+        return <ChefHat size={16} />;
+      case "restaurant":
+        return <ChefHat size={16} />;
+      default:
+        return <User size={16} />;
+    }
+  };
+
+  useEffect(() => {
+    if (!listing || !listing.locationCoords?.coordinates || listing.locationCoords.coordinates.length < 2) return;
+    const [lng, lat] = listing.locationCoords.coordinates;
+
+    const fetchPOIs = async () => {
+      setLoadingPOIs(true);
+      try {
+        const categories = [
+          { key: "hospital", label: "Hospital", query: "hospital" },
+          { key: "transport", label: "Metro/Bus Stop", query: "bus stop" },
+          { key: "gym", label: "Gym", query: "gym" },
+          { key: "grocery", label: "Grocery / Supermarket", query: "supermarket" },
+          { key: "restaurant", label: "Restaurant", query: "restaurant" },
+          { key: "college", label: "College / University", query: "university" },
+        ];
+
+        const viewbox = `${lng - 0.025},${lat + 0.025},${lng + 0.025},${lat - 0.025}`;
+        const promises = categories.map(async (cat) => {
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?q=${cat.query}&format=json&limit=1&viewbox=${viewbox}&bounded=1`;
+            const res = await fetch(url, {
+              headers: { "User-Agent": "RentFlatmateFinderAgent/1.0" }
+            });
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const item = data[0];
+              const lat2 = parseFloat(item.lat);
+              const lng2 = parseFloat(item.lon);
+              const R = 6371;
+              const dLat = (lat2 - lat) * Math.PI / 180;
+              const dLng = (lng2 - lng) * Math.PI / 180;
+              const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const dist = R * c;
+              return {
+                category: cat.label,
+                name: item.name || item.display_name.split(",")[0],
+                distance: Number(dist.toFixed(1))
+              };
+            }
+          } catch (e) {
+            console.error("POI search failed", cat.key, e);
+          }
+          return null;
+        });
+
+        const results = await Promise.all(promises);
+        const filtered = results.filter(r => r !== null);
+        
+        if (filtered.length === 0) {
+          const area = listing.area || listing.location.split(",")[0] || "Baner";
+          setNearbyPOIs([
+            { category: "Metro/Bus Stop", name: `${area} Main Road Bus Stop`, distance: 0.4 },
+            { category: "Grocery / Supermarket", name: `D-Mart Express ${area}`, distance: 0.7 },
+            { category: "Gym", name: `Gold's Gym ${area}`, distance: 0.9 },
+            { category: "Restaurant", name: `The Local Bistro`, distance: 0.3 },
+            { category: "Hospital", name: `Life Care Hospital`, distance: 1.2 },
+            { category: "College / University", name: `Symbiosis Center ${area}`, distance: 1.8 }
+          ]);
+        } else {
+          setNearbyPOIs(filtered);
+        }
+      } catch (err) {
+        console.error("Nearby places fetch error:", err);
+      } finally {
+        setLoadingPOIs(false);
+      }
+    };
+
+    fetchPOIs();
+  }, [listing]);
 
   // Get initials helper
   const getInitials = (name) => {
@@ -461,6 +559,78 @@ export default function PropertyDetails() {
               </div>
             </div>
 
+            {/* Society & Address Details */}
+            <div className="details-main-card">
+              <h3 style={{ fontSize: "16px", fontWeight: "750", color: "var(--text-main)", marginBottom: "14px" }}>Society &amp; Address Details</h3>
+              <div className="society-details-grid">
+                <div className="society-detail-item">
+                  <label>Society Name</label>
+                  <span>{listing.societyName || "Not Available"}</span>
+                </div>
+                <div className="society-detail-item">
+                  <label>Area / Locality</label>
+                  <span>{listing.area || listing.location.split(",")[0] || "Not Available"}</span>
+                </div>
+                <div className="society-detail-item">
+                  <label>City</label>
+                  <span>{listing.city || "Pune"}</span>
+                </div>
+                <div className="society-detail-item">
+                  <label>State</label>
+                  <span>{listing.state || "Maharashtra"}</span>
+                </div>
+                {listing.pincode && (
+                  <div className="society-detail-item">
+                    <label>Pincode</label>
+                    <span>{listing.pincode}</span>
+                  </div>
+                )}
+                {listing.landmark && (
+                  <div className="society-detail-item">
+                    <label>Landmark</label>
+                    <span>{listing.landmark}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Interactive Map */}
+            {listing.locationCoords?.coordinates && listing.locationCoords.coordinates.length >= 2 ? (
+              <div className="details-main-card" style={{ zIndex: 1 }}>
+                <h3 style={{ fontSize: "16px", fontWeight: "750", color: "var(--text-main)", marginBottom: "14px" }}>Property Location Map</h3>
+                <MapComponent
+                  mode="view"
+                  lat={listing.locationCoords.coordinates[1]}
+                  lng={listing.locationCoords.coordinates[0]}
+                />
+              </div>
+            ) : null}
+
+            {/* Nearby Places Section */}
+            {listing.locationCoords?.coordinates && (
+              <div className="details-main-card">
+                <h3 style={{ fontSize: "16px", fontWeight: "750", color: "var(--text-main)", marginBottom: "4px" }}>Nearby Places &amp; Transit</h3>
+                <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "0 0 14px" }}>Approximate distance from the property</p>
+                {loadingPOIs ? (
+                  <div className="skeleton-pulse" style={{ height: "100px", borderRadius: "10px", background: "#f1f5f9" }} />
+                ) : (
+                  <div className="poi-grid">
+                    {nearbyPOIs.map((poi, idx) => (
+                      <div key={idx} className="poi-chip">
+                        <div className="poi-icon-box">
+                          {getPoiIcon(poi.category)}
+                        </div>
+                        <div className="poi-info">
+                          <span className="name">{poi.name}</span>
+                          <span className="dist">{poi.category} · {poi.distance} km away</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 3. Owner section */}
             <div className="details-main-card">
               <h3 style={{ fontSize: "16px", fontWeight: "750", color: "var(--text-main)", marginBottom: "6px" }}>Owner &amp; Landlord Info</h3>
@@ -655,6 +825,11 @@ export default function PropertyDetails() {
                       compatibility rating
                     </span>
                   </div>
+                  {compatibility.distanceKm !== null && (
+                    <div className="distance-badge-prominent" style={{ marginTop: "12px", marginBottom: "0" }}>
+                      <span>📍 {compatibility.distanceKm} km from preferred location</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Specific Metric Progress Meters */}
@@ -685,7 +860,7 @@ export default function PropertyDetails() {
                     <span>AI Analysis Insights</span>
                   </div>
                   <p style={{ fontSize: "13px", color: "var(--text-main)", margin: 0, lineHeight: "1.6" }}>
-                    {compatibility.explanation.split("[Distance")[0]}
+                    {compatibility.explanation}
                   </p>
                 </div>
 

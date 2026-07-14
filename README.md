@@ -206,13 +206,15 @@ Scores are stored in the `CompatibilityScore` collection, keyed by `(tenantId, l
 ```
 [User]
   ├── role: "tenant" | "owner" | "admin"
-  ├── 1 → 1   [TenantProfile]          (tenant preferences)
-  ├── 1 → N   [Listing]                (owner's published rooms)
-  └── 1 → N   [SavedListing]           (tenant bookmarks)
+  ├── 1 → 1   [TenantProfile]          (tenant preferences and map coordinates)
+  ├── 1 → N   [Listing]                (owner's published rooms, society details, and coordinates)
+  ├── 1 → N   [SavedListing]           (tenant bookmarks)
+  └── 1 → N   [Review]                 (reviews left by tenants for owners)
 
 [Listing]
   ├── locationCoords: GeoJSON Point     (2dsphere index for geospatial queries)
   ├── status: "available" | "filled"   (filled listings hidden from search)
+  ├── societyName, area, city, state, pincode, landmark
   ├── 1 → N   [ListingImage]
   ├── 1 → N   [CompatibilityScore]     (one per tenant-listing pair)
   └── 1 → N   [Interest]               (tenant interest requests)
@@ -228,13 +230,23 @@ Scores are stored in the `CompatibilityScore` collection, keyed by `(tenantId, l
   ├── generatedBy: "groq" | "rule-engine"
   ├── score, ruleScore, llmScore, confidence
   └── pros[], cons[], explanation, summary
+
+[Review]
+  ├── ownerId: Owner User Reference
+  ├── tenantId: Tenant User Reference
+  ├── rating: Number (1-5)
+  └── reviewText: String (Max 1000 characters)
 ```
 
 ### Key Indexes
 - `CompatibilityScore`: compound unique index on `(tenantId, listingId)`
-- `Listing.locationCoords`: `2dsphere` for geospatial queries
+- `Listing.locationCoords`: `2dsphere` index for geospatial queries
+- `TenantProfile.locationCoords`: `2dsphere` index for geospatial preference calculations
 - `Conversation`: compound unique index on `(listingId, tenantId, ownerId)`
 - `Message`: index on `conversationId` for paginated thread fetching
+- `Review`: compound unique index on `(ownerId, tenantId)` to prevent duplicate reviews per host
+- `Interest`: compound unique index on `(tenantId, listingId)` to prevent duplicate requests
+- `SavedListing`: compound unique index on `(tenantId, listingId)` to prevent duplicate bookmarks
 
 ---
 

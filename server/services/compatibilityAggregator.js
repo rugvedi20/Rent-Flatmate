@@ -35,7 +35,7 @@ async function getOrGenerateCompatibility(tenantId, listing, tenantProfile, forc
   // Try Groq directly if allowed
   if (forceLlm && process.env.GROQ_API_KEY) {
     try {
-      llmResult = await getGroqCompatibility(listing, tenantProfile);
+      llmResult = await getGroqCompatibility(listing, tenantProfile, ruleResult.distanceKm);
       generatedBy = "groq";
     } catch (err) {
       logger.warn(`Groq scoring failed: ${err.message}.`);

@@ -29,6 +29,11 @@ const createReview = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "You cannot review yourself." });
   }
 
+  const existingReview = await Review.findOne({ ownerId, tenantId });
+  if (existingReview) {
+    return res.status(400).json({ success: false, message: "You have already left a review for this landlord." });
+  }
+
   const review = await Review.create({
     ownerId,
     tenantId,

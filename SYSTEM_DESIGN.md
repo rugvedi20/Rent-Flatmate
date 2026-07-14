@@ -1,77 +1,139 @@
-# System Design Write-up — Rent & Flatmate Finder
+# System Design Write-up — Rent & Flatmate Finder 🏠🤖
 
-## 1. Compatibility Scoring Design
+This document provides a comprehensive overview of the architecture, data models, AI compatibility engine, chat systems, and notification workflows for the Rent & Flatmate Finder platform.
 
-The compatibility engine is scoped to exactly what the assignment specifies: **budget and location
-match** between a tenant's profile and a listing. Other listing attributes (furnishing, room type,
-move-in date) are kept as filter/display fields rather than scoring inputs, so the score stays
-interpretable and directly comparable to the assignment's example prompt.
+---
 
-Scores are stored per `(tenantId, listingId)` pair in a dedicated `Compatibility` collection rather
-than computed on every page load. Each stored document carries an `inputSnapshot` — the exact
-location/budget/rent values used to generate it. When a tenant browses listings, the service
-compares the snapshot against current inputs; if nothing has changed, the cached score is reused
-with zero LLM calls. If the tenant updates their profile, or a listing's rent/location changes, the
-snapshot mismatch triggers regeneration. This keeps cost bounded: with N tenants and M listings, the
-system makes at most N×M LLM calls total, not N×M per page view — the difference between "expensive
-but tractable" and "unusable at scale," as the assignment's own math on 100 users × 500 listings
-makes clear.
+## 1. Hybrid Compatibility Scoring Design
 
-Search results are ranked by simply sorting the joined listing+score array descending, so ranking
-logic lives in the API layer, not in the LLM — the model's only job is to produce a per-pair number
-and explanation, not decide ordering.
+The platform uses a **two-phase hybrid compatibility engine** designed to evaluate compatibility between a tenant’s match preferences and a listing’s characteristics. 
 
-## 2. LLM Integration and Fallback
+```
+Stage 1: Rule Engine Scorer (Deterministic)
+  └─ Evaluates 100% of candidate listings locally using high-performance maths.
+  └─ Computes commute distance via the Haversine formula (max 30 pts).
+  └─ Evaluates budget fit, move-in availability, room type, furnishing, and description keyword matches (parking, smoking, pets, gender) (max 70 pts).
+  └─ Sorts listings in descending order to identify the Top-5 most relevant candidates.
 
-`geminiService.js` builds a strict prompt asking for JSON only, and `compatibilityService.js` wraps
-the call in a try/catch. On any failure — missing API key, network error, or a response that fails
-JSON parsing or shape validation (score not a number in [0,100], missing explanation) — control
-passes to `ruleEngineService.js`, a deterministic scorer using the same two inputs (location,
-budget) with fixed point weights: location match up to 60 points, budget match up to 40 points. This
-means the two engines are directly comparable and a demo can toggle between them (e.g., by unsetting
-`GEMINI_API_KEY`) without any behavioral surprise to the rest of the system — the API contract
-`{score, explanation, generatedBy}` is identical either way.
+Stage 2: LLM Engine Scorer (Groq Llama-3.3-70b)
+  └─ Invokes Groq semantic analysis ONLY for the Top-5 listings to control API cost and rate limits.
+  └─ Prompts Llama-3 with the listing specs, tenant preferences, and the exact computed distance in km.
+  └─ Receives strict JSON output containing a score, confidence, pros/cons, and distance-aware match explanations.
+```
 
-`generatedBy` is persisted alongside every score specifically so failures are auditable after the
-fact: an admin or grader can query the `Compatibility` collection and see exactly which scores came
-from Gemini versus the fallback, rather than that information being lost once the request completes.
+### Distance-Aware Compatibility Calculations
+Instead of doing exact string comparison for localities, Stage 1 uses real geographic coordinates. Given coordinates $(lat_1, lng_1)$ for the listing and $(lat_2, lng_2)$ for the tenant's preferred locality, Stage 1 calculates the physical distance $d$ in kilometers using the Haversine formula:
 
-This design treats "LLM fails gracefully" as an architectural property, not a UI message — the
-frontend never needs special-case error handling for LLM outages because the fallback produces a
-structurally identical response.
+$$\Delta lat = lat_2 - lat_1$$
+$$\Delta lng = lng_2 - lng_1$$
+$$a = \sin^2\left(\frac{\Delta lat}{2}\right) + \cos(lat_1) \cdot \cos(lat_2) \cdot \sin^2\left(\frac{\Delta lng}{2}\right)$$
+$$c = 2 \cdot \arctan2(\sqrt{a}, \sqrt{1-a})$$
+$$d = R \cdot c \quad (\text{where } R = 6371 \text{ km})$$
 
-## 3. Chat Implementation
+Based on the computed distance $d$, location compatibility is graded into bands:
+* $d \le 1.0\text{ km}$: 30 points (Excellent)
+* $1.0\text{ km} < d \le 3.0\text{ km}$: 28 points (Good)
+* $3.0\text{ km} < d \le 5.0\text{ km}$: 24 points (Moderate)
+* $5.0\text{ km} < d \le 8.0\text{ km}$: 20 points (Fair)
+* $8.0\text{ km} < d \le 12.0\text{ km}$: 15 points (Distanced)
+* $12.0\text{ km} < d \le 20.0\text{ km}$: 8 points (Far)
+* $d > 20.0\text{ km}$: 0 points (Out of range)
 
-Chat is intentionally gated: a Socket.IO connection can `join_chat` for a given listing only if an
-**accepted** `Interest` document exists linking the requesting user (as tenant or owner) to that
-listing. This check (`assertChatAccess`) is shared code between the REST history endpoint
-(`GET /messages/:listingId`) and the socket handlers, so the access rule can't drift between the two
-paths. This prevents the exact failure mode the assignment calls out — owners being spammed by every
-tenant who merely views a listing.
+### Score Aggregation
+For the Top-5 listings, the system computes an aggregated score:
+$$\text{Score}_{\text{final}} = \text{round}\left(0.3 \cdot \text{Score}_{\text{rule}} + 0.7 \cdot \text{Score}_{\text{LLM}}\right)$$
 
-Socket.IO authenticates each connection via a JWT passed in the handshake (`socket.handshake.auth.token`),
-verified with the same secret used for REST auth, so there's a single source of truth for identity
-across both transports. Messages are persisted to MongoDB *before* being broadcast (`send_message`
-awaits `Message.create` first), so a message is never visible to a recipient without also being
-durable — refreshing the page always reconstructs the exact same conversation via
-`GET /messages/:listingId`, sorted by `createdAt`.
+### Performance Caching
+To keep the application highly responsive and avoid redundant API requests, scores are cached in the `CompatibilityScore` collection. Cached scores carry an `inputSnapshot` of the Listing’s rent/location and the Tenant’s budget/location preferences. If a request is received and the inputs have not changed, the cache is hit immediately. Any change in either the listing or the tenant's profile invalidates the cache, prompting a recalculation.
 
-Rooms are scoped per-listing (`listing:<id>`) rather than per-conversation-pair, which keeps the
-model simple for the single-tenant-per-accepted-listing case the assignment describes, while still
-allowing multiple accepted tenants on different listings to have independent, isolated threads.
+---
+
+## 2. LLM Integration and Fallback Mechanism
+
+The `groqService.js` manages connections to the Groq Cloud API, targeting the `llama-3.3-70b-versatile` model. To ensure robustness, the integration implements a graceful fallback mechanism:
+1. **Try Block**: The LLM client calls the API. The prompt demands strict JSON output without markdown backticks.
+2. **Outage/Rate-Limit Catch**: If the Groq API times out, returns a rate-limit error (HTTP 429), or outputs malformed JSON, the aggregator catches the exception.
+3. **Deterministic Fallback**: The aggregator falls back entirely to the Rule-Based score. A **discount factor of 0.7** is applied to fallback scores to ensure listings validated by the AI rank higher.
+4. **Transparency**: The fallback score is saved in the database with the field `generatedBy: "rule-engine"` instead of `"groq"`, allowing administrators to audit system usage.
+
+---
+
+## 3. Access-Controlled Chat Architecture
+
+Chat conversations are designed to prevent spam. Direct messaging is disabled by default. A tenant and landlord can chat only if the tenant has expressed interest in a listing and the landlord has clicked **Accept**.
+
+* **Access Control Assertion**: Before rendering a chat window or retrieving message logs (`GET /api/messages/conversation/:id`), the backend verifies that an accepted `InterestRequest` exists linking the listing, tenant, and landlord. If not, the request returns HTTP 403.
+* **WebSocket Handshake Authentication**: Socket.IO connections pass a JWT in `socket.handshake.auth.token`. The socket middleware decrypts this token using the unified JWT secret.
+* **Message Durability**: When a message is sent via `send_message`, the server writes it to MongoDB (`Message.create`) before broadcasting it to the Socket.IO room. This ensures no message is displayed unless it is successfully persisted.
+
+---
 
 ## 4. Notification Flow
 
-Two email triggers fire from the REST controllers, not from a background job, so they execute
-synchronously within the request that causes them and are easy to trace and test:
+The notification engine keeps users updated on interest requests and acceptances:
+1. **Interest Request (`POST /api/interest`)**: If the compatibility score for a tenant-listing pair exceeds the `HIGH_COMPATIBILITY_THRESHOLD` (default 80), the system dispatches an email to the landlord indicating a high-compatibility match.
+2. **Decision Made (`PUT /api/interest/:id`)**: When a landlord accepts or rejects the interest request, the backend dispatches an email notifying the tenant of the status update.
+3. **Graceful Outage Isolation**: Nodemailer SMTP operations are isolated in individual try/catch statements. If the email server is offline, the transaction is logged as a warning, and the API request returns success, ensuring email outages do not block core platform functionality.
 
-1. **On interest creation** (`POST /interest`): if the stored compatibility score for that
-   tenant-listing pair exceeds `HIGH_COMPATIBILITY_THRESHOLD` (default 80, configurable via `.env`),
-   the owner receives a "High Compatibility Tenant Interested" email immediately.
-2. **On interest status change** (`PUT /interest/:id`): the tenant receives an acceptance or
-   rejection email depending on the owner's decision.
+---
 
-`emailService.js` wraps Nodemailer calls in their own try/catch so an SMTP outage degrades to a
-logged warning rather than failing the underlying interest/accept/reject request — the core
-transaction always succeeds even if the notification doesn't, which mirrors the same
-graceful-degradation philosophy applied to the LLM layer.
+## 5. Database Schema & ER Diagram
+
+The database utilizes Mongoose schemas built on MongoDB. The relationships are shown in the Entity-Relationship diagram below:
+
+```mermaid
+erDiagram
+    USER ||--o| TENANT_PROFILE : "has profile"
+    USER ||--o{ LISTING : "owns listings"
+    USER ||--o{ REVIEW : "writes/receives reviews"
+    USER ||--o{ SAVED_LISTING : "bookmarks listings"
+    USER ||--o{ INTEREST_REQUEST : "initiates/receives interest"
+    LISTING ||--o{ COMPATIBILITY_SCORE : "has compatibility scores"
+    LISTING ||--o{ INTEREST_REQUEST : "associated with interest"
+    INTEREST_REQUEST ||--o| CONVERSATION : "accepted generates conversation"
+    CONVERSATION ||--o{ MESSAGE : "contains messages"
+```
+
+### Key Indexes for High Performance:
+- **`2dsphere` Geospatial Indexes**: Configured on `Listing.locationCoords` and `TenantProfile.locationCoords` to optimize physical distance calculations and spatial query execution speeds.
+- **Compound Unique Index on `Review`**: Enforces `{ ownerId: 1, tenantId: 1 }` to guarantee that a tenant can only submit a single review for a landlord.
+- **Compound Unique Index on `SavedListing`**: Enforces `{ tenantId: 1, listingId: 1 }` to prevent duplicate bookmarks.
+- **Compound Unique Index on `InterestRequest`**: Enforces `{ tenantId: 1, listingId: 1 }` to prevent multiple interest requests from being sent for the same room.
+
+---
+
+## 6. System Architecture Diagram
+
+The flowchart below demonstrates the network communication paths between components:
+
+```mermaid
+graph TB
+    subgraph Frontend Client
+        React[React Client]
+        Leaflet[Leaflet Maps Component]
+        SocketIO_Client[Socket.IO Chat Client]
+    end
+
+    subgraph Backend Server
+        Express[Express REST API]
+        SocketIO_Server[Socket.IO Server]
+        RuleEngine[Rule Engine Service]
+        GroqService[Groq LLM Client]
+        EmailService[Nodemailer Email Service]
+    end
+
+    subgraph Database Layer
+        MongoDB[(MongoDB Database)]
+    end
+
+    React --> Express
+    Leaflet --> |OSM Nominatim| NominatimAPI[OSM Nominatim API]
+    SocketIO_Client <--> |WebSockets| SocketIO_Server
+    Express --> MongoDB
+    SocketIO_Server --> MongoDB
+    Express --> RuleEngine
+    RuleEngine --> GroqService
+    GroqService --> |Groq Llama 3| GroqAPI[Groq API Cloud]
+    Express --> EmailService
+    EmailService --> |SMTP| SMTP[SMTP Mailtrap Server]
+```

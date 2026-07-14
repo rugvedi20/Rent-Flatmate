@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import ProfilePage from "./ProfilePage";
 import { useAuth } from "../context/AuthContext";
+import MapComponent from "../components/MapComponent";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -11,6 +12,9 @@ export default function OwnerDashboard() {
   const [form, setForm] = useState({
     title: "", location: "", rent: "", availableFrom: "",
     roomType: "single", furnishing: "unfurnished", description: "",
+    societyName: "", area: "", city: "Pune", state: "Maharashtra",
+    pincode: "", landmark: "",
+    locationCoords: { type: "Point", coordinates: [73.8567, 18.5204] }
   });
   const [message, setMessage] = useState("");
 
@@ -41,7 +45,13 @@ export default function OwnerDashboard() {
     e.preventDefault();
     await api.post("/listings", form);
     setMessage("Listing created successfully!");
-    setForm({ title: "", location: "", rent: "", availableFrom: "", roomType: "single", furnishing: "unfurnished", description: "" });
+    setForm({
+      title: "", location: "", rent: "", availableFrom: "",
+      roomType: "single", furnishing: "unfurnished", description: "",
+      societyName: "", area: "", city: "Pune", state: "Maharashtra",
+      pincode: "", landmark: "",
+      locationCoords: { type: "Point", coordinates: [73.8567, 18.5204] }
+    });
     loadListings();
     setTimeout(() => setMessage(""), 3000);
   };
@@ -150,6 +160,57 @@ export default function OwnerDashboard() {
             <div>
               <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Locality/Address</label>
               <input placeholder="e.g. Baner, Pune" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} required />
+            </div>
+
+            {/* Leaflet CDN Mapping Tool for Listing Location Coordinates */}
+            <div style={{ marginBottom: "10px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Pin Location on Map</label>
+              <MapComponent
+                mode="edit"
+                lat={form.locationCoords.coordinates[1]}
+                lng={form.locationCoords.coordinates[0]}
+                initialSearch={form.location}
+                onChange={({ lat, lng, address }) => {
+                  setForm(prev => ({
+                    ...prev,
+                    locationCoords: { type: "Point", coordinates: [lng, lat] },
+                    location: address
+                  }));
+                }}
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Society Name</label>
+                <input placeholder="e.g. Ganga Acropolis" value={form.societyName} onChange={(e) => setForm({ ...form, societyName: e.target.value })} />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Area / Locality</label>
+                <input placeholder="e.g. Baner" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Landmark</label>
+                <input placeholder="e.g. Near Balewadi High Street" value={form.landmark} onChange={(e) => setForm({ ...form, landmark: e.target.value })} />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Pincode</label>
+                <input placeholder="e.g. 411045" value={form.pincode} onChange={(e) => setForm({ ...form, pincode: e.target.value })} />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>City</label>
+                <input placeholder="Pune" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              </div>
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>State</label>
+                <input placeholder="Maharashtra" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
+              </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>

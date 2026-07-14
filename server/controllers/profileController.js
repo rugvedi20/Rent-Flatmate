@@ -69,9 +69,11 @@ const upsertProfile = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(userId, { name: req.body.name.trim() });
   }
 
-  // 2. Process location coordinates if preferredLocation is modified
-  let locationCoords;
-  if (req.body.preferredLocation) {
+  // 2. Process location coordinates if preferredLocation is modified and coords not sent
+  let locationCoords = req.body.locationCoords;
+  const coordinatesProvided = locationCoords && locationCoords.coordinates && locationCoords.coordinates.length >= 2;
+
+  if (req.body.preferredLocation && !coordinatesProvided) {
     const coords = await geocodeAddress(req.body.preferredLocation);
     locationCoords = { type: "Point", coordinates: coords };
   }

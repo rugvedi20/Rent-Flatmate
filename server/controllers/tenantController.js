@@ -4,8 +4,11 @@ const { geocodeAddress } = require("../utils/geocoder");
 
 // POST /tenants/profile (create or replace)
 const upsertProfile = asyncHandler(async (req, res) => {
-  const coords = await geocodeAddress(req.body.preferredLocation);
-  const locationCoords = { type: "Point", coordinates: coords };
+  let locationCoords = req.body.locationCoords;
+  if (!locationCoords || !locationCoords.coordinates || locationCoords.coordinates.length < 2) {
+    const coords = await geocodeAddress(req.body.preferredLocation);
+    locationCoords = { type: "Point", coordinates: coords };
+  }
 
   const profile = await TenantProfile.findOneAndUpdate(
     { tenantId: req.user._id },

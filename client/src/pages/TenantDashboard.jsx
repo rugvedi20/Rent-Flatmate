@@ -78,33 +78,6 @@ export default function TenantDashboard() {
     }
   };
 
-  const loadProfile = async () => {
-    try {
-      const { data } = await api.get("/tenants/profile");
-      setProfile({
-        preferredLocation: data.preferredLocation || "",
-        budgetMin: data.budgetMin || "",
-        budgetMax: data.budgetMax || "",
-        moveInDate: data.moveInDate?.slice(0, 10) || "",
-        preferredRoomType: data.preferredRoomType || "",
-        preferredFurnishing: data.preferredFurnishing || "",
-        parkingRequired: !!data.parkingRequired,
-        petsAllowed: !!data.petsAllowed,
-        smokingAllowed: !!data.smokingAllowed,
-        genderPreference: data.genderPreference || "any",
-        bio: data.bio || "",
-        occupation: data.occupation || "",
-        languages: data.languages || "",
-        phone: data.phone || "",
-        avatarUrl: data.avatarUrl || "",
-        phoneVerified: !!data.phoneVerified,
-        identityVerified: !!data.identityVerified,
-      });
-    } catch {
-      // no profile yet — fine
-    }
-  };
-
   const loadListings = async (targetPage = 1, currentFilters = {}) => {
     setLoading(true);
     try {
@@ -132,7 +105,6 @@ export default function TenantDashboard() {
   };
 
   useEffect(() => {
-    loadProfile();
     loadListings(1);
     loadSentInterests();
     loadSavedListings();
@@ -145,30 +117,7 @@ export default function TenantDashboard() {
     }
   }, [searchParams]);
 
-  const saveProfile = async (e) => {
-    e.preventDefault();
-    try {
-      setMessage("Saving profile preferences & recalculating AI compatibility...");
-      
-      const payload = {
-        ...profile,
-        budgetMin: Number(profile.budgetMin) || 0,
-        budgetMax: Number(profile.budgetMax) || 0,
-        preferredRoomType: profile.preferredRoomType || undefined,
-        preferredFurnishing: profile.preferredFurnishing || undefined,
-      };
 
-      await api.post("/tenants/profile", payload);
-      await loadListings(1);
-      setMessage("Profile preferences saved successfully.");
-    } catch (err) {
-      console.error("Failed to save profile:", err);
-      const errMsg = err.response?.data?.message || err.response?.data?.error || "Failed to save profile preferences.";
-      setMessage(`Error: ${errMsg}`);
-    } finally {
-      setTimeout(() => setMessage(""), 4000);
-    }
-  };
 
   const expressInterest = async (listingId) => {
     try {

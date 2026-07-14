@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import { motion } from "framer-motion";
+import MapComponent from "../components/MapComponent";
 import {
   Mail,
   Phone,
@@ -77,6 +78,7 @@ export default function ProfilePage({ userId: propUserId, isDashboard = false })
   const [formPetsAllowed, setFormPetsAllowed] = useState(false);
   const [formSmokingAllowed, setFormSmokingAllowed] = useState(false);
   const [formGenderPreference, setFormGenderPreference] = useState("any");
+  const [formLocationCoords, setFormLocationCoords] = useState(null);
 
   // Review states
   const [reviews, setReviews] = useState([]);
@@ -118,6 +120,7 @@ export default function ProfilePage({ userId: propUserId, isDashboard = false })
       setFormPetsAllowed(!!data.profile?.petsAllowed);
       setFormSmokingAllowed(!!data.profile?.smokingAllowed);
       setFormGenderPreference(data.profile?.genderPreference || "any");
+      setFormLocationCoords(data.profile?.locationCoords || { type: "Point", coordinates: [73.8567, 18.5204] });
 
       setError(null);
     } catch (err) {
@@ -159,6 +162,9 @@ export default function ProfilePage({ userId: propUserId, isDashboard = false })
         payload.petsAllowed = formPetsAllowed;
         payload.smokingAllowed = formSmokingAllowed;
         payload.genderPreference = formGenderPreference;
+        if (formLocationCoords) {
+          payload.locationCoords = formLocationCoords;
+        }
       }
 
       await api.post("/profile", payload);
@@ -755,7 +761,7 @@ export default function ProfilePage({ userId: propUserId, isDashboard = false })
               <div style={{ borderTop: "1px solid var(--border)", paddingTop: "20px", marginTop: "10px", display: "flex", flexDirection: "column", gap: "16px" }}>
                 <h3 style={{ fontSize: "15px", fontWeight: "750" }}>Match Preferences (Tenant fields)</h3>
                 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
                   <div className="form-group">
                     <label>Preferred Locality *</label>
                     <input
@@ -765,6 +771,24 @@ export default function ProfilePage({ userId: propUserId, isDashboard = false })
                       onChange={(e) => setFormPreferredLocation(e.target.value)}
                     />
                   </div>
+
+                  {/* Leaflet CDN Mapping Tool for Tenant Preferred Location */}
+                  <div style={{ marginBottom: "10px" }}>
+                    <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Search & Pick Locality on Map</label>
+                    <MapComponent
+                      mode="edit"
+                      lat={formLocationCoords?.coordinates[1] || 18.5204}
+                      lng={formLocationCoords?.coordinates[0] || 73.8567}
+                      initialSearch={formPreferredLocation}
+                      onChange={({ lat, lng, address }) => {
+                        setFormLocationCoords({ type: "Point", coordinates: [lng, lat] });
+                        setFormPreferredLocation(address);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
                   <div className="form-group">
                     <label>Preferred Move-In Date *</label>
                     <input
