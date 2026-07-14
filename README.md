@@ -184,7 +184,7 @@ npm run dev
 | Role | Email | Password |
 |---|---|---|
 | Tenant | `tenant1@example.com` | `password123` |
-| Owner | `owner1@example.com` | `password123` |
+| Owner | `rugvedi.n20@gmail.com` | `password123` |
 | Admin | `admin@example.com` | `adminpassword123` |
 
 ---
