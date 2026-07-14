@@ -7,8 +7,11 @@ const { geocodeAddress } = require("../utils/geocoder");
 
 // POST /listings (owner only)
 const createListing = asyncHandler(async (req, res) => {
-  const coords = await geocodeAddress(req.body.location);
-  const locationCoords = { type: "Point", coordinates: coords };
+  let locationCoords = req.body.locationCoords;
+  if (!locationCoords || !locationCoords.coordinates || locationCoords.coordinates.length < 2) {
+    const coords = await geocodeAddress(req.body.location);
+    locationCoords = { type: "Point", coordinates: coords };
+  }
   const listing = await Listing.create({ ...req.body, locationCoords, ownerId: req.user._id });
   res.status(201).json(listing);
 });
@@ -24,9 +27,11 @@ const updateListing = asyncHandler(async (req, res) => {
   }
 
   const locationChanged = req.body.location && req.body.location !== listing.location;
+  const coordinatesProvided = req.body.locationCoords && req.body.locationCoords.coordinates && req.body.locationCoords.coordinates.length >= 2;
+  
   Object.assign(listing, req.body);
 
-  if (locationChanged) {
+  if (locationChanged && !coordinatesProvided) {
     const coords = await geocodeAddress(listing.location);
     listing.locationCoords = { type: "Point", coordinates: coords };
   }

@@ -160,19 +160,21 @@ export default function Chat() {
                   className={`convo-item ${isActive ? "active" : ""}`}
                   onClick={() => setActiveConvo(c)}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
-                    <span style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "14.5px" }}>
-                      {partner?.name || "Flatmate Match"}
-                    </span>
-                    <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: "500" }}>
-                      {c.lastMessage ? new Date(c.lastMessage.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ""}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: "12px", color: "var(--primary)", fontWeight: "600", marginBottom: "6px" }}>
-                    🏢 {c.listingId?.title || "Listing Address"}
-                  </div>
-                  <div style={{ fontSize: "13px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {c.lastMessage ? c.lastMessage.message : "No messages exchanged yet."}
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                      <span style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "14.5px" }}>
+                        {partner?.name || "Flatmate Match"}
+                      </span>
+                      <span style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: "500" }}>
+                        {c.lastMessage ? new Date(c.lastMessage.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ""}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--primary)", fontWeight: "600", marginBottom: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      🏢 {c.listingId?.title || "Listing Address"}
+                    </div>
+                    <div style={{ fontSize: "13px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {c.lastMessage ? c.lastMessage.message : "No messages exchanged yet."}
+                    </div>
                   </div>
                 </div>
               );

@@ -36,7 +36,7 @@ const PUNE_CENTROIDS = {
 };
 
 const ownersData = [
-  { name: "Rahul Sharma", email: "owner1@example.com", password: "password123", role: "owner" },
+  { name: "Rahul Sharma", email: "rugvedi.n20@gmail.com", password: "password123", role: "owner" },
   { name: "Amit Patel", email: "owner2@example.com", password: "password123", role: "owner" },
   { name: "Sneha Kulkarni", email: "owner3@example.com", password: "password123", role: "owner" },
   { name: "Priya Nair", email: "owner4@example.com", password: "password123", role: "owner" },
@@ -147,7 +147,7 @@ async function seedDatabase() {
       const ownerIndex = i % owners.length;
       const data = rawListings[i];
       const coords = PUNE_CENTROIDS[data.key] || PUNE_CENTROIDS.pune;
-      
+
       const listing = await Listing.create({
         title: data.title,
         location: data.location,

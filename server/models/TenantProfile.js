@@ -9,18 +9,17 @@ const tenantProfileSchema = new mongoose.Schema(
       unique: true, // one profile per tenant
       index: true,
     },
-    preferredLocation: { type: String, required: true, trim: true },
-    budgetMin: { type: Number, required: true, min: 0 },
+    preferredLocation: { type: String, trim: true },
+    budgetMin: { type: Number, min: 0 },
     budgetMax: {
       type: Number,
-      required: true,
       min: 0,
       validate: {
         validator: function (value) {
           const budgetMin = this instanceof mongoose.Document 
             ? this.budgetMin 
             : (this.getUpdate ? (this.getUpdate().$set?.budgetMin || this.getUpdate().budgetMin) : undefined);
-          if (budgetMin !== undefined && budgetMin > value) {
+          if (budgetMin !== undefined && value !== undefined && budgetMin > value) {
             return false;
           }
           return true;
@@ -28,7 +27,7 @@ const tenantProfileSchema = new mongoose.Schema(
         message: "budgetMin cannot be greater than budgetMax",
       },
     },
-    moveInDate: { type: Date, required: true },
+    moveInDate: { type: Date },
     notes: { type: String, default: "" }, // free-text preferences, optional LLM input
     preferredRoomType: {
       type: String,
@@ -52,9 +51,11 @@ const tenantProfileSchema = new mongoose.Schema(
     },
     bio: { type: String, default: "" },
     occupation: { type: String, default: "" },
+    companyOrCollege: { type: String, default: "" },
     languages: { type: String, default: "" },
     phone: { type: String, default: "" },
     avatarUrl: { type: String, default: "" },
+    coverImageUrl: { type: String, default: "" },
     phoneVerified: { type: Boolean, default: false },
     identityVerified: { type: Boolean, default: false },
   },

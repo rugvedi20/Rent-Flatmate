@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import ProfilePage from "./ProfilePage";
+import { useAuth } from "../context/AuthContext";
 
 export default function OwnerDashboard() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard | profile
   const [listings, setListings] = useState([]);
   const [interests, setInterests] = useState([]);
   const [form, setForm] = useState({
@@ -69,7 +73,43 @@ export default function OwnerDashboard() {
         <p style={{ color: "var(--text-muted)", fontSize: "16px" }}>Manage listings, review incoming interest, and check compatibility insights.</p>
       </div>
 
-      {/* Analytics grid cards instead of basic tables */}
+      {/* Subpage Tab Selection Bar */}
+      <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border)", marginBottom: "32px", paddingBottom: "12px", overflowX: "auto" }}>
+        <button
+          onClick={() => setActiveTab("dashboard")}
+          style={{
+            background: activeTab === "dashboard" ? "var(--primary)" : "transparent",
+            color: activeTab === "dashboard" ? "white" : "var(--text-muted)",
+            boxShadow: "none",
+            padding: "8px 24px",
+            fontSize: "14px",
+            fontWeight: "700"
+          }}
+        >
+          💼 Workspace Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab("profile")}
+          style={{
+            background: activeTab === "profile" ? "var(--primary)" : "transparent",
+            color: activeTab === "profile" ? "white" : "var(--text-muted)",
+            boxShadow: "none",
+            padding: "8px 24px",
+            fontSize: "14px",
+            fontWeight: "700"
+          }}
+        >
+          👤 Profile &amp; Reviews
+        </button>
+      </div>
+
+      {activeTab === "profile" && (
+        <ProfilePage userId={user?._id} isDashboard={true} />
+      )}
+
+      {activeTab === "dashboard" && (
+        <>
+          {/* Analytics grid cards instead of basic tables */}
       <div className="analytics-grid">
         <div className="stat-card">
           <div className="stat-value">{listings.length}</div>
@@ -239,6 +279,8 @@ export default function OwnerDashboard() {
         </div>
 
       </div>
+      </>
+      )}
     </div>
   );
 }

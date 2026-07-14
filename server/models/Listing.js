@@ -18,6 +18,12 @@ const listingSchema = new mongoose.Schema(
       default: "unfurnished",
     },
     description: { type: String, default: "" },
+    societyName: { type: String, default: "" },
+    area: { type: String, default: "" },
+    city: { type: String, default: "" },
+    state: { type: String, default: "" },
+    pincode: { type: String, default: "" },
+    landmark: { type: String, default: "" },
     photos: [{ type: String }], // URLs / file paths
     status: {
       type: String,

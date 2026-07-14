@@ -30,6 +30,16 @@ const createListingSchema = z.object({
     furnishing: z.enum(["furnished", "semi-furnished", "unfurnished"]).default("unfurnished"),
     description: z.string().optional().default(""),
     photos: z.array(z.string()).optional().default([]),
+    societyName: z.string().optional().default(""),
+    area: z.string().optional().default(""),
+    city: z.string().optional().default(""),
+    state: z.string().optional().default(""),
+    pincode: z.string().optional().default(""),
+    landmark: z.string().optional().default(""),
+    locationCoords: z.object({
+      type: z.string().default("Point"),
+      coordinates: z.array(z.number()).length(2),
+    }).optional(),
   }),
 });
 
@@ -44,6 +54,16 @@ const updateListingSchema = z.object({
     description: z.string().optional(),
     photos: z.array(z.string()).optional(),
     status: z.enum(["available", "filled"]).optional(),
+    societyName: z.string().optional(),
+    area: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    pincode: z.string().optional(),
+    landmark: z.string().optional(),
+    locationCoords: z.object({
+      type: z.string().default("Point"),
+      coordinates: z.array(z.number()).length(2),
+    }).optional(),
   }),
 });
 

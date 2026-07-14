@@ -19,6 +19,8 @@ const interestRoutes = require("./routes/interestRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const savedRoutes = require("./routes/savedRoutes");
+const profileRoutes = require("./routes/profileRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 connectDB();
 
@@ -58,6 +60,8 @@ app.use("/api/interest", interestRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/saved", savedRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // Centralized error handler
 app.use(errorHandler);
