@@ -97,7 +97,9 @@ export default function Chat() {
               <div className="chat-messages">
                 {loading && <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "14px" }}>Loading logs...</p>}
                 {messages.map((m) => {
-                  const isMine = String(m.sender) === String(user._id);
+                  const msgSenderId = m.sender && (m.sender._id || m.sender.id || m.sender);
+                  const currentUserId = user && (user._id || user.id);
+                  const isMine = msgSenderId && currentUserId && String(msgSenderId) === String(currentUserId);
                   return (
                     <div key={m._id} className={`msg-wrapper ${isMine ? "mine" : "theirs"}`}>
                       <div className="msg-bubble">

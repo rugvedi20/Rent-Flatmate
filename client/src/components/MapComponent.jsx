@@ -231,22 +231,29 @@ export default function MapComponent({
     <div style={{ position: "relative", width: "100%", zIndex: 10 }}>
       {/* Search Input Bar (Edit Mode only) */}
       {mode === "edit" && (
-        <form onSubmit={handleAddressSearch} className="map-search-bar">
+        <div className="map-search-bar">
           <input
             type="text"
             placeholder="Search address (e.g. Balewadi High Street, Pune)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddressSearch();
+              }
+            }}
           />
           <button 
-            type="submit" 
+            type="button" 
+            onClick={handleAddressSearch}
             disabled={loading}
             style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px" }}
           >
             <Search size={14} />
             <span>{loading ? "Searching..." : "Locate"}</span>
           </button>
-        </form>
+        </div>
       )}
 
       {searchError && (
@@ -266,6 +273,7 @@ export default function MapComponent({
               Interactive Location Map Selector
             </span>
             <button 
+              type="button"
               onClick={() => setIsFullscreen(false)} 
               className="btn"
               style={{ background: "#ef4444", color: "white", padding: "6px 12px", fontSize: "12px" }}

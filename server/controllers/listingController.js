@@ -1,7 +1,7 @@
 const Listing = require("../models/Listing");
 const TenantProfile = require("../models/TenantProfile");
 const Compatibility = require("../models/Compatibility");
-const { getOrGenerateCompatibilityBatch } = require("../services/compatibilityAggregator");
+const { getOrGenerateCompatibility, getOrGenerateCompatibilityBatch } = require("../services/compatibilityAggregator");
 const asyncHandler = require("../utils/asyncHandler");
 const { geocodeAddress } = require("../utils/geocoder");
 
@@ -153,7 +153,10 @@ const getListingById = asyncHandler(async (req, res) => {
 
   let compatibility = null;
   if (req.user && req.user.role === "tenant") {
-    compatibility = await Compatibility.findOne({ tenantId: req.user._id, listingId: listing._id });
+    const tenantProfile = await TenantProfile.findOne({ tenantId: req.user._id });
+    if (tenantProfile) {
+      compatibility = await getOrGenerateCompatibility(req.user._id, listing, tenantProfile, true);
+    }
   }
 
   res.json({ listing, compatibility });
