@@ -6,3 +6,4 @@ build/
 .DS_Store
 Rent-Flatmate.zip
 build_submission.ps1
+server/check_listings.js
