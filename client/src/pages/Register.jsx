@@ -47,7 +47,6 @@ export default function Register() {
             <select name="role" value={form.role} onChange={handleChange} style={{ marginTop: "4px" }}>
               <option value="tenant">Tenant (Looking for Room)</option>
               <option value="owner">Owner (Listing a Room)</option>
-              <option value="admin">System Admin</option>
             </select>
           </div>
           

@@ -4,6 +4,13 @@ import ProfilePage from "./ProfilePage";
 import { useAuth } from "../context/AuthContext";
 import MapComponent from "../components/MapComponent";
 
+const PROPERTY_PHOTO_PRESETS = [
+  "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&auto=format&fit=crop&q=80"
+];
+
 export default function OwnerDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard"); // dashboard | profile
@@ -14,7 +21,8 @@ export default function OwnerDashboard() {
     roomType: "single", furnishing: "unfurnished", description: "",
     societyName: "", area: "", city: "Pune", state: "Maharashtra",
     pincode: "", landmark: "",
-    locationCoords: { type: "Point", coordinates: [73.8567, 18.5204] }
+    locationCoords: { type: "Point", coordinates: [73.8567, 18.5204] },
+    photos: []
   });
   const [message, setMessage] = useState("");
 
@@ -50,7 +58,8 @@ export default function OwnerDashboard() {
       roomType: "single", furnishing: "unfurnished", description: "",
       societyName: "", area: "", city: "Pune", state: "Maharashtra",
       pincode: "", landmark: "",
-      locationCoords: { type: "Point", coordinates: [73.8567, 18.5204] }
+      locationCoords: { type: "Point", coordinates: [73.8567, 18.5204] },
+      photos: []
     });
     loadListings();
     setTimeout(() => setMessage(""), 3000);
@@ -248,6 +257,116 @@ export default function OwnerDashboard() {
             <div>
               <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Description &amp; Rules</label>
               <textarea placeholder="e.g. Near highway, no pets allowed, washing machine present..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ height: "100px" }} />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", textTransform: "uppercase" }}>Property Images</label>
+              
+              {/* Selected photos list */}
+              {form.photos && form.photos.length > 0 && (
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "10px" }}>
+                  {form.photos.map((photo, idx) => (
+                    <div key={idx} style={{ position: "relative", width: "60px", height: "60px", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--border)" }}>
+                      <img src={photo} alt={`Upload ${idx}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button
+                        type="button"
+                        onClick={() => setForm(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== idx) }))}
+                        style={{
+                          position: "absolute",
+                          top: "2px",
+                          right: "2px",
+                          width: "16px",
+                          height: "16px",
+                          background: "rgba(0,0,0,0.6)",
+                          color: "white",
+                          borderRadius: "50%",
+                          border: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "10px",
+                          cursor: "pointer",
+                          padding: 0
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Preset selection clickables */}
+              <span style={{ fontSize: "11px", color: "var(--text-muted)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Choose from presets:</span>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                {PROPERTY_PHOTO_PRESETS.map((preset, idx) => {
+                  const isSelected = form.photos.includes(preset);
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        if (isSelected) {
+                          setForm(prev => ({ ...prev, photos: prev.photos.filter(p => p !== preset) }));
+                        } else {
+                          setForm(prev => ({ ...prev, photos: [...prev.photos, preset] }));
+                        }
+                      }}
+                      style={{
+                        width: "50px",
+                        height: "50px",
+                        borderRadius: "6px",
+                        overflow: "hidden",
+                        cursor: "pointer",
+                        border: isSelected ? "2px solid var(--primary)" : "1px solid var(--border)",
+                        position: "relative",
+                        opacity: isSelected ? 1 : 0.6
+                      }}
+                    >
+                      <img src={preset} alt={`Preset ${idx}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      {isSelected && (
+                        <div style={{ position: "absolute", bottom: "2px", right: "2px", width: "12px", height: "12px", borderRadius: "50%", background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", color: "white" }}>
+                          ✓
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Custom url input box */}
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  id="customPhotoInput"
+                  placeholder="Or paste property image URL..."
+                  style={{ flex: 1, fontSize: "12.5px", padding: "8px 10px" }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = e.target.value.trim();
+                      if (val) {
+                        setForm(prev => ({ ...prev, photos: [...prev.photos, val] }));
+                        e.target.value = "";
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById("customPhotoInput");
+                    const val = el ? el.value.trim() : "";
+                    if (val) {
+                      setForm(prev => ({ ...prev, photos: [...prev.photos, val] }));
+                      el.value = "";
+                    }
+                  }}
+                  className="btn"
+                  style={{ padding: "8px 12px", fontSize: "12px", background: "white", color: "var(--text-main)", border: "1px solid var(--border)" }}
+                >
+                  Add
+                </button>
+              </div>
             </div>
 
             <button type="submit" style={{ width: "100%", marginTop: "10px" }}>Publish Ad</button>

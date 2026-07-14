@@ -6,6 +6,10 @@ const asyncHandler = require("../utils/asyncHandler");
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, role } = req.body;
 
+  if (role === "admin") {
+    return res.status(400).json({ success: false, message: "Public registration for the administrator role is disabled." });
+  }
+
   const existing = await User.findOne({ email: email.toLowerCase() });
   if (existing) {
     return res.status(409).json({ success: false, message: "Email already registered" });

@@ -141,6 +141,15 @@ async function seedDatabase() {
     const tenants = await User.create(tenantsData);
     console.log(`Seeded ${tenants.length} tenants.`);
 
+    console.log("Seeding system admin...");
+    const admin = await User.create({
+      name: "System Admin",
+      email: process.env.ADMIN_EMAIL || "admin@example.com",
+      password: process.env.ADMIN_PASSWORD || "adminpassword123",
+      role: "admin"
+    });
+    console.log(`Seeded system administrator: ${admin.email}`);
+
     console.log("Seeding listings...");
     const listings = [];
     for (let i = 0; i < rawListings.length; i++) {

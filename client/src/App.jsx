@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Routes, Route, Link, Navigate, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Routes, Route, Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -16,9 +16,29 @@ import ProfilePage from "./pages/ProfilePage";
 export default function App() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [showNotif, setShowNotif] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
+  const notifRef = useRef(null);
+
+  // Close notifications on route change
+  useEffect(() => {
+    setShowNotif(false);
+  }, [location]);
+
+  // Close notifications on click outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotif(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Get initials for profile avatar
   const getInitials = (name) => {
@@ -53,6 +73,7 @@ export default function App() {
             <>
               {/* Notification icon with Dropdown */}
               <div 
+                ref={notifRef}
                 style={{ position: "relative", cursor: "pointer", display: "flex", alignItems: "center" }}
                 onClick={() => setShowNotif(!showNotif)}
               >
