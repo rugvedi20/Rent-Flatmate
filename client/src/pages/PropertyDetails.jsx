@@ -373,13 +373,48 @@ export default function PropertyDetails() {
   };
 
   const aiExplanation = compatibility?.explanation || "Matching rules indicate moderate alignment with your budget and location constraints.";
-  const isBudgetMatch = aiExplanation.toLowerCase().includes("fits within budget") || aiExplanation.toLowerCase().includes("below budget");
-  const isMoveInMatch = aiExplanation.toLowerCase().includes("available on/before");
+  
+  const getBudgetMatchVal = () => {
+    if (compatibility?.inputSnapshot) {
+      const { rent, budgetMin, budgetMax } = compatibility.inputSnapshot;
+      if (rent !== undefined && budgetMin !== undefined && budgetMax !== undefined) {
+        if (rent >= budgetMin && rent <= budgetMax) return 100;
+        if (rent > budgetMax && rent <= budgetMax * 1.1) return 60;
+        if (rent < budgetMin) return 85; // Less than minimum is generally favorable
+        return 30;
+      }
+    }
+    // Fallback to string analysis
+    const textToSearch = (aiExplanation + " " + (compatibility?.pros || []).join(" ") + " " + (compatibility?.cons || []).join(" ")).toLowerCase();
+    if (textToSearch.includes("fits within budget") || textToSearch.includes("below budget") || textToSearch.includes("fits budget") || textToSearch.includes("affordable") || textToSearch.includes("within budget")) return 100;
+    if (textToSearch.includes("slightly above")) return 60;
+    return 30;
+  };
+
+  const getMoveInMatchVal = () => {
+    if (compatibility?.inputSnapshot) {
+      const { availableFrom, moveInDate } = compatibility.inputSnapshot;
+      if (availableFrom && moveInDate) {
+        const avail = new Date(availableFrom);
+        const moveIn = new Date(moveInDate);
+        const diffTime = avail - moveIn;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) return 100;
+        if (diffDays <= 15) return 60;
+        return 20;
+      }
+    }
+    // Fallback to string analysis
+    const textToSearch = (aiExplanation + " " + (compatibility?.pros || []).join(" ") + " " + (compatibility?.cons || []).join(" ")).toLowerCase();
+    if (textToSearch.includes("available on/before") || textToSearch.includes("available immediately") || textToSearch.includes("matches availability") || textToSearch.includes("immediate availability")) return 100;
+    if (textToSearch.includes("days after")) return 60;
+    return 20;
+  };
 
   const compatMetrics = [
-    { label: "Budget Match", val: isBudgetMatch ? 100 : aiExplanation.toLowerCase().includes("slightly above") ? 60 : 30, icon: DollarSign },
+    { label: "Budget Match", val: getBudgetMatchVal(), icon: DollarSign },
     { label: "Location Match", val: getProximityPercentage(), icon: MapPin },
-    { label: "Move-In Match", val: isMoveInMatch ? 100 : aiExplanation.toLowerCase().includes("days after") ? 60 : 20, icon: Calendar }
+    { label: "Move-In Match", val: getMoveInMatchVal(), icon: Calendar }
   ];
 
   const getPercentageColor = (pct) => {
