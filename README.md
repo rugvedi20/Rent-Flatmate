@@ -79,14 +79,36 @@ Rent-Flatmate/
     ├── src/
     │   ├── pages/                 # Landing, TenantDashboard, OwnerDashboard, Chat, Login, Register, AdminDashboard, ProfilePage, PropertyDetails
     │   ├── components/
+    │   │   ├── admin/             # Extracted admin components (StatsSection, UsersTab, etc.)
+    │   │   ├── owner/             # Extracted landlord components (CreateListingForm, etc.)
+    │   │   ├── tenant/            # Extracted search and filters components
+    │   │   ├── property/          # Extracted listing details sub-components
+    │   │   ├── profile/           # Extracted profile sub-sections
     │   │   ├── PropertyCard.jsx   # Airbnb-style listing card with AI score
     │   │   ├── MatchBreakdown.jsx # Expandable AI compatibility metrics
     │   │   ├── MapComponent.jsx   # Map container for spatial listings & profile locations
     │   │   └── ProtectedRoute.jsx # Auth-gated route wrapper
-    │   ├── context/AuthContext.jsx # Global auth state
-    │   ├── services/api.js        # Axios client with 401 auto-logout interceptor
+    │   ├── context/AuthContext.jsx # Global auth session provider
+    │   ├── services/              # API Client Service Layer
+    │   │   ├── api.js             # Axios base instance with 401 interceptor
+    │   │   ├── auth.service.js    # Auth HTTP requests
+    │   │   ├── listing.service.js # Properties HTTP requests
+    │   │   ├── profile.service.js # User preferences HTTP requests
+    │   │   ├── interest.service.js # tenant matching request workflows
+    │   │   ├── chat.service.js    # Conversation logs REST endpoint requests
+    │   │   ├── admin.service.js   # Administrative users/listings actions
+    │   │   ├── review.service.js  # Landlord review postings
+    │   │   └── saved.service.js   # Bookmark save/retrieve toggles
+    │   ├── hooks/                 # Custom React state hooks
+    │   │   ├── useAuth.js         # Auth Context accessor
+    │   │   ├── useListings.js     # Search and bookmark state tracker
+    │   │   ├── useChat.js         # Realtime chat thread and socket lifecycle hook
+    │   │   └── useProfile.js      # Profile loader hook
+    │   ├── constants/             # Application config and API routes maps
+    │   ├── utils/                 # Local storage and INR currency/date helpers
     │   ├── index.css              # Design system (Emerald palette, glassmorphism)
     │   └── App.jsx                # Main router
+    └── package.json               # Client dependencies declaration
 ```
 
 ---

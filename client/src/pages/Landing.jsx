@@ -19,7 +19,7 @@ import {
   MessageSquare,
   Sparkle
 } from "lucide-react";
-import api from "../services/api";
+import listingService from "../services/listing.service";
 import PropertyCard from "../components/PropertyCard";
 
 export default function Landing() {
@@ -83,8 +83,8 @@ export default function Landing() {
 
   useEffect(() => {
     // Load first 3 available listings for featured section
-    api.get("/listings", { params: { limit: 3 } })
-      .then(({ data }) => {
+    listingService.searchListings({ limit: 3 })
+      .then((data) => {
         const items = (data.listings || []).map(item => item.listing || item);
         setFeatured(items.slice(0, 3));
       })

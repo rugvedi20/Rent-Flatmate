@@ -2,6 +2,9 @@
 
 This document outlines the REST API routes, payloads, responses, and Socket.IO events for the Rent & Flatmate Finder platform.
 
+> [!TIP]
+> A comprehensive, interactive OpenAPI 3.0 specification is available in the project root at [swagger.yaml](file:///c:/Users/lenovo/Desktop/Rent-Flatmate/swagger.yaml). You can import this file directly into Swagger Editor, Postman, or any OpenAPI reader for interactive API testing.
+
 ---
 
 ## 1. Authentication Endpoints

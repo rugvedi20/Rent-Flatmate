@@ -1,33 +1,30 @@
 import { createContext, useContext, useState } from "react";
-import api from "../services/api";
+import authService from "../services/auth.service";
+import { storage } from "../utils";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem("user");
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState(() => storage.getUser());
 
   const login = async (email, password) => {
-    const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    const data = await authService.login(email, password);
+    storage.setToken(data.token);
+    storage.setUser(data.user);
     setUser(data.user);
     return data.user;
   };
 
   const register = async (payload) => {
-    const { data } = await api.post("/auth/register", payload);
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    const data = await authService.register(payload);
+    storage.setToken(data.token);
+    storage.setUser(data.user);
     setUser(data.user);
     return data.user;
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    storage.clear();
     setUser(null);
   };
 
@@ -39,3 +36,4 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+

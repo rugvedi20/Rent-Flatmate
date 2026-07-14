@@ -1,10 +1,7 @@
-import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { io } from "socket.io-client";
-import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
-
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5000";
+import useAuth from "../hooks/useAuth";
+import useChat from "../hooks/useChat";
+import { formatTime } from "../utils";
 
 export default function Chat() {
   const { listingId } = useParams();
@@ -12,119 +9,18 @@ export default function Chat() {
   const receiverId = searchParams.get("receiverId");
   const { user } = useAuth();
 
-  const [conversations, setConversations] = useState([]);
-  const [activeConvo, setActiveConvo] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [text, setText] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const socketRef = useRef(null);
-  const bottomRef = useRef(null);
-
-  const loadConversations = async (selectLegacyId = null) => {
-    try {
-      const { data } = await api.get("/messages/conversations");
-      setConversations(data);
-
-      if (selectLegacyId && selectLegacyId !== "active" && selectLegacyId.match(/^[0-9a-fA-F]{24}$/)) {
-        const found = data.find(
-          (c) =>
-            String(c.listingId?._id) === String(selectLegacyId) &&
-            (String(c.tenantId?._id) === String(user._id) || String(c.ownerId?._id) === String(user._id))
-        );
-        if (found) {
-          setActiveConvo(found);
-        } else {
-          api.get(`/messages/${selectLegacyId}?receiverId=${receiverId}`)
-            .then(async () => {
-              const refreshed = await api.get("/messages/conversations");
-              setConversations(refreshed.data);
-              const match = refreshed.data.find(c => String(c.listingId?._id) === String(selectLegacyId));
-              if (match) setActiveConvo(match);
-            })
-            .catch(() => setError("Chat is not available for this listing yet."));
-        }
-      } else if (data.length > 0 && !activeConvo) {
-        setActiveConvo(data[0]);
-      }
-    } catch (err) {
-      setError("Failed to load conversations");
-    }
-  };
-
-  useEffect(() => {
-    loadConversations(listingId);
-  }, [listingId]);
-
-  useEffect(() => {
-    if (!activeConvo) return;
-
-    setLoading(true);
-    api.get(`/messages/conversation/${activeConvo._id}?limit=50`)
-      .then(({ data }) => {
-        setMessages(data.messages || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError("Failed to load chat history");
-        setLoading(false);
-      });
-
-    const socket = io(SOCKET_URL, { auth: { token: localStorage.getItem("token") } });
-    socketRef.current = socket;
-
-    socket.emit("join_chat", { conversationId: activeConvo._id }, (res) => {
-      if (!res.ok) setError(res.message);
-    });
-
-    socket.on("receive_message", (msg) => {
-      if (String(msg.conversationId) === String(activeConvo._id)) {
-        setMessages((prev) => {
-          if (prev.some((m) => m._id === msg._id)) return prev;
-          return [...prev, msg];
-        });
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [activeConvo]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const send = (e) => {
-    e.preventDefault();
-    if (!text.trim() || !activeConvo) return;
-
-    const recipient = String(activeConvo.tenantId?._id) === String(user._id)
-      ? activeConvo.ownerId?._id
-      : activeConvo.tenantId?._id;
-
-    socketRef.current.emit(
-      "send_message",
-      {
-        conversationId: activeConvo._id,
-        receiverId: recipient,
-        message: text,
-      },
-      (res) => {
-        if (!res.ok) {
-          setError(res.message);
-        } else {
-          setConversations((prev) =>
-            prev.map((c) =>
-              String(c._id) === String(activeConvo._id) ? { ...c, lastMessage: res.message } : c
-            )
-          );
-        }
-      }
-    );
-    setText("");
-  };
+  const {
+    conversations,
+    activeConvo,
+    setActiveConvo,
+    messages,
+    text,
+    setText,
+    error,
+    loading,
+    send,
+    bottomRef,
+  } = useChat(listingId, receiverId, user);
 
   return (
     <div className="container" style={{ maxWidth: "1150px" }}>
@@ -208,7 +104,7 @@ export default function Chat() {
                         {m.message}
                       </div>
                       <div className="msg-meta">
-                        {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatTime(m.createdAt)}
                         {m.readAt && isMine && <span style={{ marginLeft: "6px", color: "var(--primary)" }}>✓ Read</span>}
                       </div>
                     </div>

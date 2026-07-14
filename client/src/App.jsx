@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Routes, Route, Link, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "./context/AuthContext";
+import useAuth from "./hooks/useAuth";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import TenantDashboard from "./pages/TenantDashboard";
@@ -56,17 +56,17 @@ export default function App() {
         <div className="nav-links">
           {user?.role === "tenant" && (
             <>
-              <Link to="/tenant" className="active">Explore &amp; Matches</Link>
-              <Link to="/chat/active?receiverId=none">Messages</Link>
+              <Link to="/tenant" className={location.pathname === "/tenant" ? "active" : ""}>Explore &amp; Matches</Link>
+              <Link to="/chat/active?receiverId=none" className={location.pathname.startsWith("/chat") ? "active" : ""}>Messages</Link>
             </>
           )}
           {user?.role === "owner" && (
             <>
-              <Link to="/owner" className="active">Workspace Dashboard</Link>
-              <Link to="/chat/active?receiverId=none">Messages</Link>
+              <Link to="/owner" className={location.pathname === "/owner" ? "active" : ""}>Workspace Dashboard</Link>
+              <Link to="/chat/active?receiverId=none" className={location.pathname.startsWith("/chat") ? "active" : ""}>Messages</Link>
             </>
           )}
-          {user?.role === "admin" && <Link to="/admin">Admin Console</Link>}
+          {user?.role === "admin" && <Link to="/admin" className={location.pathname === "/admin" ? "active" : ""}>Admin Console</Link>}
         </div>
         <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
           {user ? (

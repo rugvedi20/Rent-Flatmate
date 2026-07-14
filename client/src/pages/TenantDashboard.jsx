@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import api from "../services/api";
 import PropertyCard from "../components/PropertyCard";
 import ProfilePage from "./ProfilePage";
-import { useAuth } from "../context/AuthContext";
+import useAuth from "../hooks/useAuth";
+import useListings from "../hooks/useListings";
+import SearchFilters from "../components/tenant/SearchFilters";
+import ListingsGrid from "../components/tenant/ListingsGrid";
 
 export default function TenantDashboard() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState({
+  
+  // Unused state preserved to maintain 100% compatibility with potential external tools/tests
+  const [profile] = useState({
     preferredLocation: "",
     budgetMin: "",
     budgetMax: "",
@@ -30,85 +34,39 @@ export default function TenantDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabParam || "explore"); // explore | saved | profile
-  const [listings, setListings] = useState([]);
-  const [savedListings, setSavedListings] = useState([]);
-  const [ranked, setRanked] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [sentInterests, setSentInterests] = useState([]);
 
-  // Filter States
-  const [searchLoc, setSearchLoc] = useState("");
-  const [searchMin, setSearchMin] = useState("");
-  const [searchMax, setSearchMax] = useState("");
-  const [searchRoomType, setSearchRoomType] = useState("");
-  const [searchFurnishing, setSearchFurnishing] = useState("");
-
-  // Pagination States
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const loadSentInterests = async () => {
-    try {
-      const { data } = await api.get("/interest/sent");
-      setSentInterests(data);
-    } catch {
-      // ignore
-    }
-  };
-
-  const loadSavedListings = async () => {
-    try {
-      const { data } = await api.get("/saved");
-      setSavedListings(data);
-    } catch {
-      // ignore
-    }
-  };
-
-  const toggleSave = async (listingId) => {
-    try {
-      const { data } = await api.post("/saved/toggle", { listingId });
-      setMessage(data.message);
-      await loadSavedListings();
-      setTimeout(() => setMessage(""), 3000);
-    } catch {
-      setMessage("Failed to update bookmark.");
-      setTimeout(() => setMessage(""), 3000);
-    }
-  };
-
-  const loadListings = async (targetPage = 1, currentFilters = {}) => {
-    setLoading(true);
-    try {
-      const params = {
-        page: targetPage,
-        limit: 6, // Show 6 per page for a balanced responsive 3-column grid
-        location: currentFilters.location !== undefined ? currentFilters.location : (searchLoc || undefined),
-        minRent: currentFilters.minRent !== undefined ? currentFilters.minRent : (searchMin || undefined),
-        maxRent: currentFilters.maxRent !== undefined ? currentFilters.maxRent : (searchMax || undefined),
-        roomType: currentFilters.roomType !== undefined ? currentFilters.roomType : (searchRoomType || undefined),
-        furnishing: currentFilters.furnishing !== undefined ? currentFilters.furnishing : (searchFurnishing || undefined),
-      };
-
-      const { data } = await api.get("/listings", { params });
-      setRanked(data.ranked);
-      setListings(data.listings);
-      setTotalPages(data.pagination?.totalPages || 1);
-      setPage(targetPage);
-    } catch (err) {
-      console.error("Failed to load listings:", err);
-      setMessage("Failed to retrieve listings. If your session has expired, please sign out and sign in again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    listings,
+    ranked,
+    loading,
+    page,
+    totalPages,
+    message,
+    searchLoc,
+    setSearchLoc,
+    searchMin,
+    setSearchMin,
+    searchMax,
+    setSearchMax,
+    searchRoomType,
+    setSearchRoomType,
+    searchFurnishing,
+    setSearchFurnishing,
+    savedListings,
+    sentInterests,
+    loadSentInterests,
+    loadSavedListings,
+    toggleSave,
+    loadListings,
+    expressInterest,
+    handleReset,
+  } = useListings();
 
   useEffect(() => {
     loadListings(1);
     loadSentInterests();
     loadSavedListings();
-  }, []);
+  }, [loadListings, loadSentInterests, loadSavedListings]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -117,37 +75,8 @@ export default function TenantDashboard() {
     }
   }, [searchParams]);
 
-
-
-  const expressInterest = async (listingId) => {
-    try {
-      await api.post("/interest", { listingId });
-      setMessage("Interest expressed successfully! Notification sent to owner.");
-      await loadSentInterests();
-      setTimeout(() => setMessage(""), 3500);
-    } catch (err) {
-      setMessage(err.response?.data?.message || "Failed to express interest");
-      setTimeout(() => setMessage(""), 4000);
-    }
-  };
-
-  const handleReset = () => {
-    setSearchLoc("");
-    setSearchMin("");
-    setSearchMax("");
-    setSearchRoomType("");
-    setSearchFurnishing("");
-    loadListings(1, {
-      location: "",
-      minRent: "",
-      maxRent: "",
-      roomType: "",
-      furnishing: ""
-    });
-  };
-
-  // Helper to calculate profile completion percentage
-  const getProfileCompletion = () => {
+  // Helper preserved to maintain 100% compatibility
+  const getProfileCompletion = useCallback(() => {
     let completed = 2; // preferredLocation & moveInDate are required
     if (profile.budgetMin) completed += 1;
     if (profile.budgetMax) completed += 1;
@@ -158,11 +87,10 @@ export default function TenantDashboard() {
     if (profile.phoneVerified) completed += 1;
     if (profile.identityVerified) completed += 1;
     return Math.round((completed / 10) * 100);
-  };
+  }, [profile]);
 
   return (
     <div className="container py-8">
-
       {/* Subpage Tab Selection Bar */}
       <div style={{ display: "flex", gap: "12px", borderBottom: "1px solid var(--border)", marginBottom: "32px", paddingBottom: "12px", overflowX: "auto" }}>
         <button
@@ -225,157 +153,35 @@ export default function TenantDashboard() {
           </div>
 
           {/* Upgraded Premium Filter Layout */}
-          <div className="filter-card-bar">
-            <div className="filter-group">
-              <label>Locality / Area</label>
-              <input
-                type="text"
-                placeholder="Search localities (e.g. Baner, Wakad)..."
-                value={searchLoc}
-                onChange={(e) => setSearchLoc(e.target.value)}
-              />
-            </div>
-
-            <div className="filter-group">
-              <label>Room Type</label>
-              <select value={searchRoomType} onChange={(e) => setSearchRoomType(e.target.value)}>
-                <option value="">Any Room Type</option>
-                <option value="single">Single Room</option>
-                <option value="shared">Shared Room</option>
-                <option value="1bhk">1 BHK</option>
-                <option value="2bhk">2 BHK</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>Furnishing</label>
-              <select value={searchFurnishing} onChange={(e) => setSearchFurnishing(e.target.value)}>
-                <option value="">Any Furnishing</option>
-                <option value="furnished">Furnished</option>
-                <option value="semi-furnished">Semi-Furnished</option>
-                <option value="unfurnished">Unfurnished</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>Min Price (₹)</label>
-              <input
-                type="number"
-                placeholder="Min Budget"
-                value={searchMin}
-                onChange={(e) => setSearchMin(e.target.value)}
-              />
-            </div>
-
-            <div className="filter-group">
-              <label>Max Price (₹)</label>
-              <input
-                type="number"
-                placeholder="Max Budget"
-                value={searchMax}
-                onChange={(e) => setSearchMax(e.target.value)}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: "8px", alignSelf: "flex-end", height: "42px" }}>
-              <button
-                type="button"
-                onClick={() => loadListings(1)}
-                style={{ padding: "0 24px", height: "100%", fontWeight: "700" }}
-              >
-                Apply Filters
-              </button>
-              {(searchLoc || searchRoomType || searchFurnishing || searchMin || searchMax) && (
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  style={{ background: "#f1f5f9", color: "#475569", border: "1px solid var(--border)", padding: "0 16px", height: "100%", fontWeight: "700" }}
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-          </div>
+          <SearchFilters
+            searchLoc={searchLoc}
+            setSearchLoc={setSearchLoc}
+            searchMin={searchMin}
+            setSearchMin={setSearchMin}
+            searchMax={searchMax}
+            setSearchMax={setSearchMax}
+            searchRoomType={searchRoomType}
+            setSearchRoomType={setSearchRoomType}
+            searchFurnishing={searchFurnishing}
+            setSearchFurnishing={setSearchFurnishing}
+            loadListings={loadListings}
+            handleReset={handleReset}
+          />
 
           {/* Grid Layout containing Property Cards */}
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: "750", color: "var(--text-main)" }}>
-                Verified Property Matches {ranked && "· Ranked by Compatibility"}
-              </h2>
-              {ranked && <span className="badge badge-high" style={{ fontSize: "11px" }}>AI Matching Engine Active</span>}
-            </div>
-
-            {loading && (
-              <div className="landing-grid-3">
-                {[1, 2, 3, 4, 5, 6].map(i => (
-                  <div key={i} className="card" style={{ padding: 0, height: "380px", overflow: "hidden", borderRadius: "16px", border: "1px solid var(--border)", boxShadow: "none" }}>
-                    <div style={{ height: "230px" }} className="skeleton-pulse" />
-                    <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                      <div style={{ height: "12px", width: "40%" }} className="skeleton-pulse skeleton-text" />
-                      <div style={{ height: "20px", width: "80%" }} className="skeleton-pulse skeleton-text heading" />
-                      <div style={{ height: "14px", width: "60%" }} className="skeleton-pulse skeleton-text" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!loading && listings.length === 0 && (
-              <div style={{ padding: "64px 24px", textAlign: "center", background: "white", borderRadius: "20px", border: "1px solid var(--border)", color: "var(--text-muted)" }}>
-                <span style={{ fontSize: "48px" }}>🧭</span>
-                <h3 style={{ fontSize: "18px", fontWeight: "750", color: "var(--text-main)", marginTop: "16px" }}>No matching rooms found</h3>
-                <p style={{ fontSize: "13.5px", color: "var(--text-muted)", maxWidth: "340px", margin: "8px auto 20px" }}>
-                  We couldn't find any listings that match your search filters. Try adjusting your price range or locality criteria.
-                </p>
-                <button onClick={handleReset} className="btn" style={{ background: "var(--primary-light)", color: "var(--primary)" }}>Reset All Filters</button>
-              </div>
-            )}
-
-            {!loading && listings.length > 0 && (
-              <div className="landing-grid-3">
-                {listings.map((item) => {
-                  const listing = ranked ? item.listing : item;
-                  const compatibility = ranked ? item.compatibility : null;
-                  const isBookmarked = savedListings.some((s) => s._id === listing._id);
-                  const hasExpressedInterest = sentInterests.some((i) => String(i.listingId?._id) === String(listing._id));
-
-                  return (
-                    <PropertyCard
-                      key={listing._id}
-                      listing={listing}
-                      compatibility={compatibility}
-                      isSaved={isBookmarked}
-                      onToggleSave={toggleSave}
-                      onExpressInterest={expressInterest}
-                      hasExpressedInterest={hasExpressedInterest}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Pagination controls */}
-            {!loading && totalPages > 1 && (
-              <div style={{ display: "flex", gap: "12px", alignItems: "center", justifyContent: "center", marginTop: "32px" }}>
-                <button
-                  disabled={page <= 1}
-                  onClick={() => loadListings(page - 1)}
-                  style={{ background: "#64748b", padding: "10px 20px" }}
-                >
-                  Previous
-                </button>
-                <span style={{ fontSize: "14px", fontWeight: "700" }}>Page {page} of {totalPages}</span>
-                <button
-                  disabled={page >= totalPages}
-                  onClick={() => loadListings(page + 1)}
-                  style={{ background: "#64748b", padding: "10px 20px" }}
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </div>
+          <ListingsGrid
+            loading={loading}
+            listings={listings}
+            ranked={ranked}
+            savedListings={savedListings}
+            sentInterests={sentInterests}
+            toggleSave={toggleSave}
+            expressInterest={expressInterest}
+            handleReset={handleReset}
+            page={page}
+            totalPages={totalPages}
+            loadListings={loadListings}
+          />
         </>
       )}
 
